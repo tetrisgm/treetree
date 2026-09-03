@@ -52,6 +52,16 @@ Two surfaces, two experiences:
   party can undo the other. Try it live:
   <https://family-tree-demo.shokunin.workers.dev/demo>
 
+**The page adapts to who's driving.** When a model context is present —
+at load, or injected late (both surfaces are polled) — the chat sidebar
+collapses and the intro modal stays out of the way, because inside an
+agentic browser the agent *is* the chat and the tools cover everything the
+in-page chat can do. The edge control reopens our chat, and the page never
+re-collapses it on a human who did: detection sets the default, the human
+keeps the last word. One page, two presentations
+([FamilyTreeApp.tsx](app/components/FamilyTreeApp.tsx), asserted in the
+browser specs).
+
 Registration follows the spec's lifecycle (register on mount, unregister on
 unmount so no tool outlives the UI it drives), and
 [tests/browser/webmcp.spec.ts](tests/browser/webmcp.spec.ts) proves the whole

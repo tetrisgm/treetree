@@ -24,6 +24,7 @@ export function DemoIntro({ mode, onClose, onSwitch }: { mode: "about" | "webmcp
               <li>Every fact keeps its source; conflicting sources become questions for the family; everything undoes.</li>
               <li>Your agents are users too — WebMCP tools on the page itself, hosted MCP for Claude and ChatGPT.</li>
               <li>Self-hosted and MIT: one command deploys your family&rsquo;s own private archive.</li>
+              <li>The page adapts to who&rsquo;s driving: in an agentic browser the chat tucks away and the view leads — your agent is the chat.</li>
             </ul>
             <p className="demo-intro-note">This demo is the invented Everfield family — explore freely, nothing here is real.</p>
             <div className="demo-intro-actions">
@@ -47,7 +48,8 @@ export function DemoIntro({ mode, onClose, onSwitch }: { mode: "about" | "webmcp
               <li>&ldquo;Add Iris Rowan, born 1980, and make Maya Rowan her mother&rdquo;</li>
               <li>&ldquo;Undo that&rdquo; — either of you can undo the other</li>
             </ul>
-            <p className="demo-intro-note">13 tools here, 7 in the sandbox. The chat&rsquo;s suggested prompts are this same script — click one to watch the behaviour, then say it to your agent. The chat itself honours the canvas and view commands, exactly like the tools.</p>
+            <p className="demo-intro-note">13 tools here, 7 in the sandbox. The chat&rsquo;s suggested prompts are this same script — click one to watch the behaviour, then say it to your agent.</p>
+            <p className="demo-intro-note">And the page knows who&rsquo;s driving: when your browser exposes a model context, the chat sidebar collapses and this intro stays out of the way — your agent is the chat. The <strong>›</strong> edge control brings our chat back, and the page never re-collapses it on you.</p>
             <div className="demo-intro-actions">
               <a className="demo-intro-primary" href="/demo">Open the sandbox</a>
               <button type="button" onClick={onClose}>Explore this archive</button>
