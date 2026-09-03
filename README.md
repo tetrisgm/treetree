@@ -7,7 +7,7 @@ every fact can carry a source, conflicting sources become durable disputed
 claims a person adjudicates, every mutation is audited and reversible, and
 likely-living people are redacted from public view.
 
-**Product home:** <https://treetree.app> · **Live demo:** <https://family-tree-demo.shokunin.workers.dev> — the
+**Live demo:** <https://treetree.app> — tester guide at [/start](https://treetree.app/start), agent sandbox at [/demo](https://treetree.app/demo) — the
 invented Everfield family. Every person is synthetic, the archive is public,
 and no AI key is attached (the chat politely declines; tree, views, GEDCOM
 import, and both MCP surfaces are fully live). Every real deployment is the
@@ -16,15 +16,15 @@ instance also serves its own `/demo` sandbox with invented people.
 
 ## Try it as a WebMCP tester (60 seconds)
 
-Open the [live demo](https://family-tree-demo.shokunin.workers.dev) in a
+Open the [live demo](https://treetree.app) in a
 WebMCP-enabled browser (Chrome 149+, or an agentic in-app browser) and talk
 to your agent: *"Where does this family come from?"*, *"How is June Marlowe
 related to Nina Everfield?"*, *"Show Rosalind on the canvas"*, *"Switch to
-the map."* Then open [/demo](https://family-tree-demo.shokunin.workers.dev/demo)
+the map."* Then open [/demo](https://treetree.app/demo)
 and let it create: *"Add Iris Rowan born 1980, make Maya Rowan her mother,
 marry her to a new person Owen Pike"* — the canvas grows as it works, the
 sidebar narrates, and *"undo that"* takes it back. The full guide lives at
-[/start](https://family-tree-demo.shokunin.workers.dev/start). The demo's
+[/start](https://treetree.app/start). The demo's
 chat is a live AI archivist grounded in the graph (rate-limited; every
 person is invented).
 
