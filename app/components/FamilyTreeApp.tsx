@@ -27,6 +27,7 @@ type Props = {
   viewer: { signedIn: boolean; canEdit: boolean; role: "admin" | "canEdit" | "canView" | null; personId?: string | null; displayName: string | null };
   signOutPath: string;
   signInEnabled: boolean;
+  webMcpDemo?: boolean;
 };
 
 type ChatMessage = { role: "user" | "assistant"; text: string };
@@ -58,7 +59,7 @@ const VIEW_MODES = ["tree", "family", "list", "timeline", "calendar", "map", "st
 type ViewMode = (typeof VIEW_MODES)[number];
 const VIEW_KEYS: Record<ViewMode, string> = { tree: "view.tree", family: "view.family", list: "view.list", timeline: "view.timeline", calendar: "view.calendar", map: "view.map", stats: "view.stats", fill: "view.fill" };
 
-export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signInEnabled }: Props) {
+export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signInEnabled, webMcpDemo }: Props) {
   const { t, lang, setLang } = useLanguage();
   const [tree, setTree] = useState(initialTree ?? EMPTY_TREE);
   const [treeLoaded, setTreeLoaded] = useState(Boolean(initialTree));
@@ -347,6 +348,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
 
   return (
     <main ref={mainRef} className={`min-h-screen bg-[var(--paper)] text-[var(--ink)] ${chatCollapsed ? "chat-collapsed" : ""} ${selectedPerson || (placeFocus && viewMode === "map") ? "has-person" : ""}`} style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties} data-build-id={BUILD_ID} data-version={VERSION} data-hydrated="false">
+      {webMcpDemo && <a className="webmcp-demo-pill" href="/start">WebMCP demo — drive this page with your browser&rsquo;s agent →</a>}
       {authError && <div className="border-b border-[rgba(226,140,115,.35)] bg-[rgba(226,140,115,.12)] px-5 py-3 text-center text-sm text-[#e8a289]">{authError === "not_invited" ? "Apple sign-in worked, but this Apple account is not on the family editor list." : authError === "apple_token_exchange_failed" ? "Apple returned an authentication error. Please try again, and contact the site owner if it continues." : "We could not complete Apple sign-in. Please try again."}</div>}
 
       <header className={`site-action-bar absolute top-0 z-50 flex h-16 items-center justify-between border-b border-[var(--line)] bg-[color-mix(in_srgb,var(--paper)_92%,transparent)] px-6 backdrop-blur-xl sm:px-8 ${chatCollapsed ? "is-chat-collapsed" : ""}`}>
