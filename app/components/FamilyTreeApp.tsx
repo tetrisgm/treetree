@@ -9,6 +9,7 @@ import { FamilyTreeCanvas } from "./FamilyTreeCanvas";
 import { Markdown } from "./Markdown";
 import { useLanguage } from "./LanguageContext";
 import { useWebMcp } from "./useWebMcp";
+import { DemoIntro } from "./DemoIntro";
 import { LANGUAGES, LANGUAGE_FLAGS, LANGUAGE_NAMES } from "../../lib/i18n";
 import { BUILD_ID, VERSION } from "../../lib/build";
 import { isUsefulArchivePath, selectedFileKey, selectedFilePath } from "../../lib/upload-policy";
@@ -134,6 +135,20 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
       window.history.replaceState({ personId: person.id }, "", `?p=${person.id}`);
     }
   }, [treeLoaded]);
+  // demo instance only: the product intro auto-opens on first landing, and
+  // the top pill reopens the WebMCP guide at any time
+  const [intro, setIntro] = useState<"about" | "webmcp" | null>(null);
+  useEffect(() => {
+    if (!webMcpDemo) return;
+    // deferred a tick: paint the tree first, then raise the introduction
+    let seen = false;
+    try { seen = Boolean(window.localStorage.getItem("treetree-intro-seen")); } catch { /* private mode */ }
+    if (seen) return;
+    const timer = setTimeout(() => setIntro("about"), 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const closeIntro = () => { setIntro(null); try { window.localStorage.setItem("treetree-intro-seen", "1"); } catch { /* private mode */ } };
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
   const [hoverPreview, setHoverPreview] = useState<Person | null>(null);
@@ -348,7 +363,8 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
 
   return (
     <main ref={mainRef} className={`min-h-screen bg-[var(--paper)] text-[var(--ink)] ${chatCollapsed ? "chat-collapsed" : ""} ${selectedPerson || (placeFocus && viewMode === "map") ? "has-person" : ""}`} style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties} data-build-id={BUILD_ID} data-version={VERSION} data-hydrated="false">
-      {webMcpDemo && <a className="webmcp-demo-pill" href="/start">WebMCP demo — drive this page with your browser&rsquo;s agent →</a>}
+      {webMcpDemo && <button type="button" className="webmcp-demo-pill" onClick={() => setIntro("webmcp")}>WebMCP demo — drive this page with your browser&rsquo;s agent →</button>}
+      {webMcpDemo && intro && <DemoIntro mode={intro} onClose={closeIntro} onSwitch={setIntro} />}
       {authError && <div className="border-b border-[rgba(226,140,115,.35)] bg-[rgba(226,140,115,.12)] px-5 py-3 text-center text-sm text-[#e8a289]">{authError === "not_invited" ? "Apple sign-in worked, but this Apple account is not on the family editor list." : authError === "apple_token_exchange_failed" ? "Apple returned an authentication error. Please try again, and contact the site owner if it continues." : "We could not complete Apple sign-in. Please try again."}</div>}
 
       <header className={`site-action-bar absolute top-0 z-50 flex h-16 items-center justify-between border-b border-[var(--line)] bg-[color-mix(in_srgb,var(--paper)_92%,transparent)] px-6 backdrop-blur-xl sm:px-8 ${chatCollapsed ? "is-chat-collapsed" : ""}`}>

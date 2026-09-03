@@ -1407,8 +1407,24 @@ html[lang="fa"] { font-variant-numeric: normal; }
 @media(max-width:760px){.demo-shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}.demo-sidebar{max-height:45dvh;border-right:0;border-bottom:1px solid var(--line);padding:20px}.demo-sidebar h1{font-size:1.8rem}.demo-canvas{min-height:55dvh}}
 
 /* the demo instance's pointer for WebMCP testers; env-gated, absent on real archives */
-.webmcp-demo-pill { position:fixed; top:.65rem; left:50%; transform:translateX(-50%); z-index:60;
+.webmcp-demo-pill { position:fixed; top:4.4rem; left:50%; transform:translateX(-50%); z-index:60;
   background:var(--accent-fill,#43684f); color:#fff; font-size:.78rem; font-weight:600;
   padding:.4rem .95rem; border-radius:999px; box-shadow:0 6px 24px rgba(0,0,0,.35); white-space:nowrap; }
 .webmcp-demo-pill:hover { filter:brightness(1.1); }
 @media (max-width: 743px) { .webmcp-demo-pill { display:none; } }
+
+/* demo intro modals */
+.demo-intro-backdrop { position:fixed; inset:0; z-index:80; background:rgba(6,9,7,.62); backdrop-filter:blur(3px);
+  display:flex; align-items:center; justify-content:center; padding:1.2rem; }
+.demo-intro { max-width:34rem; width:100%; background:var(--card); border:1px solid var(--line); border-radius:1.1rem;
+  padding:1.6rem 1.8rem; box-shadow:0 24px 80px rgba(0,0,0,.5); max-height:86vh; overflow-y:auto; }
+.demo-intro h2 { font-family:var(--font-serif); font-size:1.55rem; margin:.35rem 0 .8rem; letter-spacing:-.02em; }
+.demo-intro ul { margin:.5rem 0 .9rem; padding-left:1.1rem; display:grid; gap:.45rem; font-size:.9rem; line-height:1.5; }
+.demo-intro p { font-size:.9rem; line-height:1.55; margin:.4rem 0; }
+.demo-intro code { font-size:.8rem; }
+.demo-intro-note { color:var(--muted); font-size:.8rem; }
+.demo-intro-actions { display:flex; flex-wrap:wrap; gap:.55rem; margin-top:1.1rem; align-items:center; }
+.demo-intro-actions button, .demo-intro-actions a { border:1px solid var(--line); border-radius:999px; background:transparent;
+  color:var(--ink); padding:.5rem 1rem; font-size:.85rem; font-weight:600; cursor:pointer; text-decoration:none; }
+.demo-intro-actions .demo-intro-primary { background:var(--accent-fill,#43684f); border-color:transparent; color:#fff; }
+.demo-intro-actions button:hover, .demo-intro-actions a:hover { border-color:var(--accent); }
