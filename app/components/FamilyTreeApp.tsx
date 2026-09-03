@@ -145,7 +145,10 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
     let seen = false;
     try { seen = Boolean(window.localStorage.getItem("treetree-intro-seen")); } catch { /* private mode */ }
     if (seen) return;
-    const timer = setTimeout(() => setIntro("about"), 400);
+    // in an agentic browser the intro would cover the view the agent drives;
+    // the host's presence (checked at fire time, past the injection window)
+    // suppresses the auto-open - the pill still opens it on demand
+    const timer = setTimeout(() => { if (!webMcpAvailable()) setIntro("about"); }, 900);
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
