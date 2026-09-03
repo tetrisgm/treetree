@@ -47,7 +47,7 @@ export function DemoIntro({ mode, onClose, onSwitch }: { mode: "about" | "webmcp
               <li>&ldquo;Add Iris Rowan, born 1980, and make Maya Rowan her mother&rdquo;</li>
               <li>&ldquo;Undo that&rdquo; — either of you can undo the other</li>
             </ul>
-            <p className="demo-intro-note">13 tools here, 7 in the sandbox. The chat is a live AI archivist grounded in the graph.</p>
+            <p className="demo-intro-note">13 tools here, 7 in the sandbox. The chat&rsquo;s suggested prompts are this same script — click one to watch the behaviour, then say it to your agent. The chat itself honours the canvas and view commands, exactly like the tools.</p>
             <div className="demo-intro-actions">
               <a className="demo-intro-primary" href="/demo">Open the sandbox</a>
               <button type="button" onClick={onClose}>Explore this archive</button>
