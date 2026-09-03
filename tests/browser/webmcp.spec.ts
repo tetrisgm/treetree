@@ -15,12 +15,14 @@ function session(email: string): string {
   return `${payload}.${b64(createHmac("sha256", secret).update(payload).digest())}`;
 }
 
-// runs before every app script on every navigation - the deterministic slot
+// runs before every app script on every navigation - the deterministic slot.
+// Installed on document.modelContext (the surface the WebMCP Challenge rules
+// name) to prove registration works there, not only on navigator.
 async function installMockModelContext(page: Page) {
   await page.addInitScript(() => {
     const registry: Record<string, unknown> = {};
     (window as unknown as { __webmcp: Record<string, unknown> }).__webmcp = registry;
-    Object.defineProperty(navigator, "modelContext", {
+    Object.defineProperty(document, "modelContext", {
       configurable: true,
       value: {
         registerTool: (tool: { name: string }) => { registry[tool.name] = tool; },
@@ -70,4 +72,34 @@ test("a WebMCP tool call moves the real UI", async ({ page }) => {
   } else {
     expect(opened.result.content[0].text).toMatch(/No one named|Several people/);
   }
+});
+
+test("in the sandbox, an agent builds the family the human is watching", async ({ page }) => {
+  await page.goto("/demo");
+  await page.locator(".tree-card").first().waitFor();
+  const before = await page.locator(".tree-card").count();
+
+  const built = await page.evaluate(async () => {
+    const tools = (window as unknown as { __webmcp: Record<string, { execute: (a: Record<string, unknown>) => Promise<{ content: Array<{ text: string }>; isError?: boolean }> }> }).__webmcp;
+    const added = await tools.add_person.execute({ name: "Iris Rowan", birth_year: "1980", gender: "female" });
+    const linked = await tools.link_parent.execute({ parent: "Maya Rowan", child: "Iris Rowan" });
+    const family = await tools.list_family.execute({});
+    return { added: added.content[0].text, linked: linked.content[0].text, family: family.content[0].text };
+  });
+  expect(built.added).toContain("Iris Rowan");
+  expect(built.linked).toContain("parent of Iris Rowan");
+  expect(built.family).toContain("Iris Rowan (1980)");
+
+  // the canvas the human watches grew, and the sidebar narrates the agent
+  await expect.poll(() => page.locator(".tree-card").count()).toBeGreaterThan(before);
+  await expect(page.locator("[data-demo-message]")).toContainText("🤖");
+
+  // and the human's undo takes the agent's work back out
+  const undone = await page.evaluate(async () => {
+    const tools = (window as unknown as { __webmcp: Record<string, { execute: (a: Record<string, unknown>) => Promise<{ content: Array<{ text: string }> }> }> }).__webmcp;
+    await tools.undo.execute({});
+    await tools.undo.execute({});
+    return (await tools.list_family.execute({})).content[0].text;
+  });
+  expect(undone).not.toContain("Iris");
 });

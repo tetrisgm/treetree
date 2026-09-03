@@ -14,6 +14,42 @@ import, and both MCP surfaces are fully live). Every real deployment is the
 opposite: one Worker, one family, private by default, theirs alone. Each
 instance also serves its own `/demo` sandbox with invented people.
 
+## WebMCP: the page is a tool surface
+
+Family Tree registers its tools on **both** `document.modelContext` and
+`navigator.modelContext` ([lib/webmcp-register.ts](lib/webmcp-register.ts)),
+so any agentic browser — Chrome 149+ with WebMCP, or an in-app agent
+browser — can drive the page the signed-in member is looking at, with no
+token and no OAuth: the agent acts as the person already in the chair.
+
+Two surfaces, two experiences:
+
+- **The archive** ([app/components/useWebMcp.ts](app/components/useWebMcp.ts),
+  [lib/webmcp-tools.ts](lib/webmcp-tools.ts)) — thirteen tools that answer
+  the questions families actually ask ("how am I related to her?", "where do
+  we come from?", "what was his life like?") **and move the live UI**:
+  `show_person_on_canvas` re-centres the real family canvas and opens the
+  record, `switch_view` changes what's on screen. The agent points at people
+  as it talks about them — the one thing a remote MCP server can never do.
+- **The sandbox at `/demo`** ([app/demo/DemoClient.tsx](app/demo/DemoClient.tsx)) —
+  humans and agents *create together*. With no sign-in and only invented
+  people, the agent holds `add_person`, `link_parent`, `link_marriage`,
+  `import_sample_gedcom`, `undo`, and `reset_sandbox` over the very canvas
+  the human is watching. The sidebar narrates each agent action, and either
+  party can undo the other. Try it live:
+  <https://family-tree-demo.shokunin.workers.dev/demo>
+
+Registration follows the spec's lifecycle (register on mount, unregister on
+unmount so no tool outlives the UI it drives), and
+[tests/browser/webmcp.spec.ts](tests/browser/webmcp.spec.ts) proves the whole
+loop in CI: a mock model-context injected before any app script captures the
+registrations, drives a tool, and asserts the canvas actually changed.
+
+WebMCP is one of three agent doors into the same intent layer — the hosted
+MCP server (OAuth, for remote agents) and the in-app archivist (for humans)
+answer through the same code, so an agent in your browser, an agent in the
+cloud, and a relative typing all get the same truth.
+
 ## What's inside
 
 - **Next.js (vinext) on a Cloudflare Worker** — one Worker, one D1 database,
