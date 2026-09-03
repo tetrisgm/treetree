@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // scripts/setup.mjs rewrites this file for your deployment - run it first.
+  "name": "my-family-archive",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2026-08-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "PUBLIC_ORIGIN": "https://example.workers.dev",
+    "OWNER_EMAIL": "",
+    "ARCHIVE_NAME": "",
+    "ARCHIVE_TAGLINE": ""
+  },
+  "assets": { "directory": "dist/client" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "my-family-archive-db", "database_id": "run-scripts-setup-mjs" }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "my-family-archive-files" }
+  ],
+  "observability": { "enabled": true }
+}
