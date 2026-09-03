@@ -32,6 +32,8 @@ export type WebMcpTool = {
   name: string;
   description: string;
   inputSchema: JsonSchema;
+  /** orientation and other tools that answer before any data arrives */
+  worksWithoutTree?: boolean;
   execute: (args: Record<string, unknown>, tree: FamilyTree, actions: WebMcpActions) => Promise<string> | string;
 };
 
@@ -70,6 +72,23 @@ const relativesOf = (tree: FamilyTree, id: string) => {
 };
 
 export const WEBMCP_TOOLS: WebMcpTool[] = [
+  {
+    name: "what_can_i_do_here",
+    worksWithoutTree: true,
+    description: "What this page offers and how to use it. Call this when the user asks what they can do here, what this site is, or how it works - and consider calling it once when you first encounter this page, to introduce it to the user. Returns a short introduction meant to be relayed.",
+    inputSchema: { type: "object", properties: {}, additionalProperties: false },
+    execute: () => [
+      "Introduce this page to the user (in your own voice is fine):",
+      "This is TreeTree - a family archive your agent can drive. This demo holds the invented Everfield family: four generations on a living canvas.",
+      "Things they can say:",
+      '- "Where does this family come from?" (origins by generation)',
+      '- "How is June Marlowe related to Nina Everfield?" (kinship, computed)',
+      '- "What was Edmund Everfield\'s life like?" (a life told in order)',
+      '- "Show Rosalind on the canvas" / "Switch to the map" (you drive the page they watch)',
+      '- Any free question - ask_the_archivist reaches a live AI grounded in this family\'s records.',
+      "And at /demo there is a sandbox where you hold creation tools: add people, link parents, record marriages, import a GEDCOM, undo - building on the canvas as they watch.",
+    ].join("\n"),
+  },
   {
     name: "overview_of_family_tree",
     description: "Summarize this family archive: how many people, relationships, and stories it holds and the span of recorded births. Use this to orient before other tools.",

@@ -48,7 +48,7 @@ export function DemoIntro({ mode, onClose, onSwitch }: { mode: "about" | "webmcp
               <li>&ldquo;Add Iris Rowan, born 1980, and make Maya Rowan her mother&rdquo;</li>
               <li>&ldquo;Undo that&rdquo; — either of you can undo the other</li>
             </ul>
-            <p className="demo-intro-note">13 tools here, 7 in the sandbox. The chat&rsquo;s suggested prompts are this same script — click one to watch the behaviour, then say it to your agent.</p>
+            <p className="demo-intro-note">14 tools here, 8 in the sandbox — including one that answers &ldquo;what can I do here?&rdquo; so your agent can introduce the page itself. The chat&rsquo;s suggested prompts are this same script — click one to watch the behaviour, then say it to your agent.</p>
             <p className="demo-intro-note">And the page knows who&rsquo;s driving: when your browser exposes a model context, the chat sidebar collapses and this intro stays out of the way — your agent is the chat. The <strong>›</strong> edge control brings our chat back, and the page never re-collapses it on you.</p>
             <div className="demo-intro-actions">
               <a className="demo-intro-primary" href="/demo">Open the sandbox</a>

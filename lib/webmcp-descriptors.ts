@@ -15,6 +15,7 @@ export const ARCHIVE_TOOL_DESCRIPTORS: ToolDescriptor[] =
   WEBMCP_TOOLS.map(({ name, description, inputSchema }) => ({ name, description, inputSchema }));
 
 export const SANDBOX_TOOL_DESCRIPTORS: ToolDescriptor[] = [
+  { name: "what_can_i_do_here", description: "What this sandbox offers. Call this when the user asks what they can do here or how it works - and consider calling it once when you first encounter this page, to introduce it. Returns a short introduction meant to be relayed.", inputSchema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "list_family", description: "Everyone currently in the sandbox family, with birth years.", inputSchema: { type: "object", properties: {}, additionalProperties: false } },
   { name: "add_person", description: "Add an invented person to the sandbox family the human is watching. The canvas updates immediately.", inputSchema: { type: "object", properties: { name: { type: "string" }, birth_year: { type: "string" }, gender: { type: "string", enum: ["male", "female"] } }, required: ["name"], additionalProperties: false } },
   { name: "link_parent", description: "Record that one sandbox person is a parent of another (both must exist; use their exact names).", inputSchema: { type: "object", properties: { parent: { type: "string" }, child: { type: "string" } }, required: ["parent", "child"], additionalProperties: false } },

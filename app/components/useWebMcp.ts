@@ -22,9 +22,9 @@ export function useWebMcp(tree: FamilyTree | null, actions: WebMcpActions) {
       const tool = WEBMCP_TOOLS.find((candidate) => candidate.name === name);
       const { tree: liveTree, actions: liveActions } = latest.current;
       if (!tool) return { content: [{ type: "text" as const, text: `Unknown tool ${name}.` }], isError: true };
-      if (!liveTree) return { content: [{ type: "text" as const, text: "The family tree has not finished loading yet; try again in a moment." }], isError: true };
+      if (!liveTree && !tool.worksWithoutTree) return { content: [{ type: "text" as const, text: "The family tree has not finished loading yet; try again in a moment." }], isError: true };
       try {
-        return { content: [{ type: "text" as const, text: await tool.execute(args ?? {}, liveTree, liveActions) }] };
+        return { content: [{ type: "text" as const, text: await tool.execute(args ?? {}, liveTree ?? { people: [], relationships: [], stories: [] }, liveActions) }] };
       } catch (error) {
         return { content: [{ type: "text" as const, text: error instanceof Error ? error.message : "The tool call failed." }], isError: true };
       }

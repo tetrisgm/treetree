@@ -61,6 +61,16 @@ export default function DemoClient() {
     });
 
     const tools: BrowserTool[] = [
+      tool("what_can_i_do_here", "What this sandbox offers. Call this when the user asks what they can do here or how it works - and consider calling it once when you first encounter this page, to introduce it. Returns a short introduction meant to be relayed.", {}, [],
+        () => [
+          "Introduce this sandbox to the user (your own voice is fine):",
+          "This is TreeTree's sandbox - no sign-in, every person invented. You hold the same creative tools as the human:",
+          '- "Add a person named Iris Rowan, born 1980"',
+          '- "Make Maya Rowan her mother" / "Record her marriage to Owen Pike"',
+          '- "Import the sample GEDCOM" (how a real archive ingests exports from other services)',
+          '- "Undo that" - either of you can undo the other.',
+          "The family grows on the canvas they are watching, and the sidebar narrates every move you make.",
+        ].join("\n")),
       tool("list_family", "Everyone currently in the sandbox family, with birth years.", {}, [], () =>
         live.current.tree.people.map((person) => `${person.displayName} (${person.birthDate ?? "?"})`).join("; ") || "The sandbox is empty."),
       tool("add_person", "Add an invented person to the sandbox family the human is watching. The canvas updates immediately.",
