@@ -1,0 +1,1407 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #131314;
+  --stage: #0b0b0c;
+  --sidebar: #1c1c1e;
+  --wash: rgba(255,255,255,.08);
+  --ink: #f5f5f7;
+  --muted: #9a9aa1;
+  --line: rgba(255,255,255,.13);
+  --danger: #ff6b61;
+  --accent: #8fba9c;
+  --accent-fill: #457156;
+  --card: #2c2c2e;
+  --parent-line: #7d92b5;
+  --marriage-line: #caa06b;
+  --shadow-tint: 0, 0, 0;
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+html, body { overscroll-behavior: none; }
+
+@theme inline {
+  --font-sans: var(--font-sans);
+  --font-serif: var(--font-serif);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); font-family: var(--font-sans), Arial, sans-serif; }
+button, textarea { font: inherit; }
+/* Safari drops back to cursor:auto over a button's descendants when they are
+   positioned or laid out as flex/grid children, so every interactive element
+   states its cursor AND hands it down. (The pattern ramine.net settled on.) */
+button, [role="button"], [role="tab"], summary, label[for], a[href],
+input[type="button"], input[type="submit"], input[type="reset"] { cursor: pointer; }
+button *, [role="button"] *, [role="tab"] *, summary *, a[href] * { cursor: inherit; }
+button:disabled, button:disabled * { cursor: default; }
+
+.family-shell { position: relative; isolation: isolate; }
+.site-action-bar { left: 430px; right: 0; transition: left 220ms ease; }
+.site-action-bar.is-chat-collapsed { left: 0; }
+.archive-view-switcher { position:absolute; left:50%; top:50%; display:flex; transform:translate(-50%,-50%); border:1px solid var(--line); border-radius:.65rem; background:rgba(44,44,46,.7); padding:.18rem; }
+.archive-view-switcher button { min-width:4.5rem; border-radius:.5rem; padding:.4rem .7rem; color:var(--muted); font-size:.75rem; font-weight:600; }
+.archive-view-switcher button:hover { color:var(--ink); }
+.archive-view-switcher button.is-active { background:var(--card); color:var(--ink); box-shadow:0 1px 5px rgba(0,0,0,.1); }
+.chat-sidebar { position: relative; z-index: 30; width: 430px; flex: 0 0 430px; overflow: hidden; transition: width 220ms ease, flex-basis 220ms ease, border-color 220ms ease; }
+.chat-sidebar.is-collapsed { width: 0; flex-basis: 0; border-color: transparent; padding: 0; }
+.chat-sidebar.is-collapsed > div { opacity: 0; pointer-events: none; }
+.sidebar-toggle { display: inline-flex; height: 2rem; width: 2rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: .55rem; color: var(--muted); line-height: 1; transition: 160ms ease; }
+.sidebar-toggle svg { width: 1.05rem; height: 1.05rem; fill: none; stroke: currentColor; stroke-width: 1.35; stroke-linecap: round; stroke-linejoin: round; }
+.sidebar-toggle:hover { border-color: var(--accent); color: var(--accent); background: var(--wash); }
+.account-menu-button { display: inline-flex; height: 2rem; width: 2rem; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: .55rem; color: var(--muted); font-size: 1.25rem; line-height: 1; letter-spacing: .08em; }
+.account-menu-button:hover { border-color: var(--line); background: var(--wash); color: var(--ink); }
+.workspace-header { min-height: 2.75rem; }
+.editor-composer { min-height: 12rem; margin-left: -.5rem; width: calc(100% + 1rem); border-radius: 1.75rem !important; padding: 1.2rem !important; box-shadow: 0 8px 24px rgba(0,0,0,.35); }
+.editor-composer textarea { position: relative; z-index: 1; min-height: 7rem; padding: .15rem .35rem; font-size: 1rem; line-height: 1.6; pointer-events: auto; }
+.editor-composer > div:last-child { margin-top: .75rem; }
+.chat-edge-reveal { position: fixed; left: 0; top: 50%; z-index: 40; display: flex; height: 4.5rem; width: 2.5rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-left: 0; border-radius: 0 .8rem .8rem 0; background: rgba(44,44,46,.98); color: var(--ink); font-size: 1.8rem; font-weight: 500; opacity: 0; pointer-events: none; transform: translateY(-50%) translateX(-.4rem); transition: opacity 160ms ease, transform 160ms ease, color 160ms ease; box-shadow: 0 8px 24px rgba(0,0,0,.16); }
+.chat-edge-reveal.is-visible { opacity: 1; pointer-events: auto; transform: translateY(-50%) translateX(0); }
+.chat-edge-reveal:hover { color: var(--accent); }
+.public-chat { position: relative; z-index: 1; margin-left: -1.5rem; width: calc(100% + 3rem); min-height: 0; }
+.public-chat > div:first-child { padding-inline: 1.5rem; }
+.public-chat-note { padding: 0 1.5rem; }
+.public-chat-composer { margin-left: 1rem; width: calc(100% - 2rem); border-radius: 1.75rem; }
+.public-chat-thread { max-width: 100%; padding: 0 .5rem; }
+.public-chat-user-bubble { margin: 0 0 2rem auto; width: fit-content; max-width: 88%; border-radius: 1.5rem; background: var(--accent-fill); padding: .85rem 1.1rem; color: #fff; font-size: .95rem; line-height: 1.55; }
+.public-chat-syncing { display: flex; align-items: center; gap: .5rem; margin: 0 0 1.5rem; color: var(--muted); font-size: .9rem; }
+.public-chat-answer { margin: 0; white-space: pre-wrap; font-size: .95rem; line-height: 1.7; }
+@media (min-width: 640px) { .public-chat { margin-left: -2rem; width: calc(100% + 4rem); } .public-chat > div:first-child { padding-inline: 2rem; } .public-chat-note { padding: 0 2rem; } }
+
+.tree-grid {
+  background-image: linear-gradient(to right, rgba(255,255,255,.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,.05) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(to bottom, black, transparent 85%);
+}
+
+.archive-view { position:absolute; inset:0; overflow:auto; padding:7rem clamp(2rem,6vw,7rem) 4rem; background:var(--stage); }
+.archive-view-heading { max-width:42rem; }
+.archive-view-heading h2 { margin:.2rem 0 0; font-family:var(--font-serif),Georgia,serif; font-size:clamp(2rem,4vw,3.5rem); font-weight:500; letter-spacing:-.035em; }
+.archive-view-heading > p:last-child { margin-top:.75rem; color:var(--muted); line-height:1.6; }
+.archive-empty { margin-top:4rem; border:1px solid var(--line); border-radius:1rem; background:rgba(44,44,46,.7); padding:2rem; color:var(--muted); }
+.timeline-list { position:relative; max-width:56rem; margin:3.5rem 0 0 5rem; padding:0 0 2rem 3rem; border-left:2px solid color-mix(in srgb,var(--accent) 28%,var(--line)); }
+.timeline-list li { position:relative; min-height:7rem; padding:0 0 2rem 1rem; }
+.timeline-list time { position:absolute; right:calc(100% + 4.3rem); top:.2rem; color:var(--muted); font-size:.85rem; font-variant-numeric:tabular-nums; }
+.timeline-dot { position:absolute; left:-3.48rem; top:.25rem; width:.8rem; height:.8rem; border:3px solid white; border-radius:999px; background:var(--accent); box-shadow:0 0 0 2px var(--accent); }
+.timeline-dot.is-death { background:#8e8e93; box-shadow:0 0 0 2px #8e8e93; }
+.timeline-dot.is-story { background:#bf7b30; box-shadow:0 0 0 2px #bf7b30; }
+.timeline-list button { display:grid; gap:.4rem; width:100%; border:1px solid rgba(255,255,255,.09); border-radius:1rem; background:rgba(44,44,46,.86); padding:1.15rem 1.3rem; text-align:left; box-shadow:0 10px 28px rgba(0,0,0,.3); }
+.timeline-list button:not(:disabled):hover { border-color:var(--accent); transform:translateY(-1px); }
+.timeline-list button span { font-family:var(--font-serif),Georgia,serif; font-size:1.25rem; }
+.timeline-list button strong { color:var(--muted); font-size:.78rem; font-weight:500; }
+.world-map { position:relative; max-width:74rem; aspect-ratio:2/1; margin:2.5rem auto 0; overflow:hidden; border:1px solid rgba(255,255,255,.09); border-radius:2rem; background:radial-gradient(circle at 60% 28%,rgba(40,46,42,.92),rgba(24,28,25,.92)); box-shadow:0 20px 60px rgba(0,0,0,.35); }
+.world-map svg path { fill:#39423b; stroke:#141a16; stroke-width:.7; vector-effect:non-scaling-stroke; }
+.world-map svg path:hover { fill:#414b43; }
+/* markers hold their screen size as the map zooms - counter-scaled so nearby
+   cities (Tehran sits almost on Qazvin) separate instead of staying merged */
+.map-marker { position:absolute; display:flex; align-items:center; transform:translate(-50%,-50%) scale(calc(1 / var(--map-scale, 1))); filter:drop-shadow(0 5px 8px rgba(0,0,0,.18)); }
+.map-marker > span { position:relative; z-index:1; display:flex; width:2rem; height:2rem; align-items:center; justify-content:center; border:3px solid white; border-radius:999px; background:var(--accent); color:white; font-size:.68rem; font-weight:700; }
+.map-marker > strong { position:absolute; left:1.6rem; min-width:max-content; border:1px solid rgba(255,255,255,.09); border-radius:.65rem; background:rgba(44,44,46,.9); padding:.35rem .55rem .35rem .7rem; color:var(--ink); font-size:.7rem; }
+.map-marker:hover > span { transform:scale(1.12); }
+.map-empty { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); color:var(--muted); text-align:center; }
+.unmapped-places { max-width:74rem; margin:1rem auto 0; color:var(--muted); font-size:.75rem; line-height:1.6; }
+@media (max-width: 760px) { .archive-view-switcher { left:auto; right:1rem; transform:translateY(-50%); } .archive-view-switcher button { min-width:0; padding:.4rem .55rem; } .archive-view { padding:6rem 1.25rem 3rem; } .timeline-list { margin-left:3rem; } }
+
+.tree-card.is-highlighted { border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 24%, transparent), 0 18px 40px rgba(0,113,227,.2); }
+
+.chat-bubble {
+  width: fit-content; max-width: 18rem; border: 1px solid var(--line); border-radius: 1rem 1rem 1rem .2rem;
+  background: var(--card); padding: .75rem 1rem; font-size: .8125rem; line-height: 1.45rem; box-shadow: 0 5px 20px rgba(0,0,0,.3);
+}
+.chat-bubble.is-user { margin-left: auto; border: 0; border-radius: 1rem 1rem .2rem 1rem; background: var(--accent-fill); color: #fff; }
+.file-chip { max-width: 11rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; border-radius: 999px; background: var(--wash); padding: .35rem .65rem; font-size: .6875rem; color: var(--muted); }
+.agent-pulse { display: inline-block; width: .45rem; height: .45rem; margin-right: .3rem; border-radius: 999px; background: var(--accent); animation: pulse 1s ease-in-out infinite alternate; }
+@keyframes pulse { to { opacity: .25; transform: scale(.75); } }
+
+.person-modal { position: relative; max-height: min(92vh, 900px); width: min(100%, 52rem); overflow-y: auto; border: 1px solid var(--line); border-radius: 1.75rem; background: var(--card); padding: 3rem; box-shadow: 0 28px 100px rgba(0,0,0,.5); }
+@media (max-width: 639px) { .person-modal { padding: 1.5rem; } }
+.photo-remove-button { border:0; background:transparent; color:var(--danger); font-size:.75rem; text-decoration:underline; }
+.eyebrow { margin-bottom: .45rem; color: var(--accent); font-size: .65rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+.modal-relationships { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; margin-top: 2rem; border-top: 1px solid var(--line); padding-top: 1.5rem; }
+.modal-relationships > div { min-height: 4rem; }
+.person-modal .eyebrow { letter-spacing: .13em; }
+.person-modal-v2 { width: min(100%, 64rem); padding: 3.5rem; }
+.person-delete-footer { margin-top: 2rem; padding-top: 1.25rem; border-top: 1px solid var(--line); }
+.person-delete-button { color: var(--danger); font-size: .85rem; font-weight: 600; }
+.person-delete-button:hover { text-decoration: underline; }
+.person-modal-hero { display:flex; gap:1.5rem; align-items:center; }
+.relationship-heading { display:flex; align-items:center; justify-content:space-between; gap:.75rem; }
+.relative-picker { position:relative; display:grid; gap:8px; margin-top:12px; }
+.relative-suggestions { overflow:hidden; border:1px solid var(--line); border-radius:14px; background:var(--card); box-shadow:0 12px 30px rgba(0,0,0,.35); }
+.relative-suggestions button { display:flex; width:100%; flex-direction:column; gap:2px; padding:10px 12px; text-align:left; }
+.relative-suggestions button + button { border-top:1px solid var(--line); }
+.relative-suggestions button:hover { background:var(--wash); }
+.relative-suggestions strong { font-size:13px; }
+.relative-suggestions span { color:var(--muted); font-size:11px; }
+.relative-add-button { justify-self:start; border-radius:999px; background:var(--ink); color:#fff; padding:8px 13px; font-size:12px; font-weight:700; }
+.relative-add-button:disabled { opacity:.4; }
+.relationship-add:hover { color:var(--accent); border-color:var(--accent); }
+.person-facts { display:grid; grid-template-columns:1fr 1fr; gap:2rem; margin-top:2rem; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:1.25rem 0; color:var(--muted); }
+.person-facts p { margin-top:.3rem; line-height:1.5; }
+.person-biography { margin-top:1.5rem; max-width:48rem; color:var(--ink); font-family:var(--font-serif),Georgia,serif; font-size:1.1rem; line-height:1.8; }
+.relationship-group { margin-top:1.4rem; }
+.relationship-add { border:1px solid var(--line); border-radius:999px; width:1.8rem; height:1.8rem; color:var(--muted); }
+.relationship-remove { color:var(--danger); font-size:1.1rem; line-height:1; }
+.modal-notice { margin-top:1rem; color:var(--muted); font-size:.8rem; }
+@media (max-width: 639px) { .person-modal-v2 { padding:2rem 1.25rem; } .person-facts { grid-template-columns:1fr; } .person-modal-hero { align-items:flex-start; flex-direction:column; } }
+.relationship-group { border-radius: 1rem; padding: .55rem; }
+.relationship-add { display: inline-flex; width: 1.6rem; height: 1.6rem; align-items: center; justify-content: center; border: 1px solid var(--line); border-radius: 999px; background: var(--wash); color: var(--ink); font-size: 1rem; line-height: 1; }
+.relationship-add:hover { border-color: var(--accent); color: var(--accent); }
+.modal-input { width: 100%; border: 1px solid var(--line); border-radius: .65rem; background: rgba(44,44,46,.7); padding: .6rem .7rem; font-size: .8rem; outline: none; }
+.modal-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+
+@media (max-width: 639px) {
+  .chat-sidebar { width: min(430px, 100vw); flex-basis: min(430px, 100vw); }
+}
+
+.family-canvas { position: absolute; inset: 0; z-index: 0; width: 100%; height: 100%; min-height: 100%; cursor: -webkit-grab; cursor: grab; touch-action:none; -webkit-user-select:none; user-select:none; overscroll-behavior:none; }
+/* A single, real hit surface mirrors the one-element canvas model used on
+   ramine.net. Safari no longer has to resolve a cursor across the transformed
+   viewport, SVG connectors, and their descendants. */
+.canvas-hit-surface { position:absolute; inset:0; z-index:0; cursor:-webkit-grab; cursor:grab; touch-action:none; }
+.family-canvas[data-panning="true"], .family-canvas[data-panning="true"] .canvas-hit-surface { cursor:-webkit-grabbing !important; cursor:grabbing !important; }
+.family-canvas .tree-card { cursor: pointer !important; }
+.family-canvas .tree-card * { cursor: inherit !important; }
+.tree-custom-cursor { position:fixed; left:0; top:0; z-index:90; display:none; width:2rem; height:2rem; opacity:0; pointer-events:none; transform:translate(-50%,-50%); transition:opacity 80ms linear; }
+.tree-custom-cursor svg { display:block; width:100%; height:100%; overflow:visible; filter:drop-shadow(0 1px 2px rgba(0,0,0,.55)); }
+.tree-custom-cursor path { fill:#fff; stroke:#111827; stroke-width:1.35; stroke-linecap:round; stroke-linejoin:round; }
+.tree-custom-cursor[data-mode="pointer"] { transform:translate(-30%,-8%); }
+@media (hover:hover) and (pointer:fine) {
+  /* every element inside the canvas that carries its own cursor rule must be
+     listed here, or Safari shows its native cursor on top of the app-drawn
+     one (the double-cursor bug the branch chips shipped with) */
+  .family-canvas[data-custom-cursor="true"], .family-canvas[data-custom-cursor="true"] .canvas-hit-surface, .family-canvas[data-custom-cursor="true"] .tree-card, .family-canvas[data-custom-cursor="true"] .tree-card *, .family-canvas[data-custom-cursor="true"] .branch-chip { cursor:none !important; }
+  .family-canvas[data-custom-cursor="true"] .tree-custom-cursor { display:block; }
+  .family-canvas[data-custom-cursor="true"] .tree-custom-cursor[data-visible="true"] { opacity:1; }
+}
+.family-canvas img { -webkit-user-drag: none; user-select: none; }
+.build-version { position: fixed; left: .75rem; bottom: .55rem; z-index: 20; color: rgba(255,255,255,.52); font: 500 .65rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .03em; pointer-events: none; }
+.tree-viewport { position:absolute; inset:0; z-index:1; transform-origin:center; pointer-events:none; touch-action:none; }
+.canvas-controls { position:absolute; right:.6rem; bottom:.6rem; z-index:12; display:flex; align-items:center; gap:.15rem; border:1px solid rgba(255,255,255,.09); border-radius:.75rem; background:rgba(44,44,46,.88); padding:.25rem; color:var(--ink); box-shadow:0 10px 30px rgba(0,0,0,.45); backdrop-filter:blur(14px); }
+.canvas-controls button { display:flex; height:2rem; min-width:2rem; align-items:center; justify-content:center; border:0; border-radius:.5rem; background:transparent; color:inherit; font-size:1.15rem; line-height:1; }
+.canvas-controls button:hover { background:rgba(255,255,255,.14); }
+.canvas-controls .canvas-zoom-level { min-width:3.6rem; font-size:.72rem; font-variant-numeric:tabular-nums; }
+.tree-connectors { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
+.tree-connectors line, .tree-connectors path { fill:none; stroke-width:2.5; }
+.parent-connector { stroke:#4e8cff; }
+.spouse-connector { stroke:#e5ad52; stroke-dasharray:8 6; }
+.canvas-legend { position:absolute; left:16px; bottom:16px; z-index:4; display:flex; align-items:center; gap:6px;
+  padding:6px 12px; border-radius:999px; background:rgba(44,44,46,.85); border:1px solid var(--line);
+  font-size:11px; color:var(--muted); pointer-events:none; }
+.legend-swatch { display:inline-block; width:18px; height:0; border-top:2.5px solid #4e8cff; }
+.legend-swatch.legend-marriage { border-top:3px dashed #e5ad52; }
+.tree-card { position:absolute; z-index:2; display:flex; width:15rem; min-height:6rem; transform:translate(-50%,-50%); align-items:center; gap:.75rem; border:1px solid rgba(255,255,255,.1); border-radius:1rem; background:rgba(44,44,46,.9); padding:1rem; color:var(--ink); box-shadow:0 14px 40px rgba(0,0,0,.4); cursor:pointer; pointer-events:auto; text-align:left; backdrop-filter:blur(12px); }
+.tree-card-portrait { display:flex; width:2.8rem; height:2.8rem; flex:0 0 auto; align-items:center; justify-content:center; overflow:hidden; border-radius:.75rem; background:rgba(143,186,156,.16); color:var(--accent); font-family:var(--font-serif),serif; font-size:1.25rem; }
+.tree-card-portrait img { width:100%; height:100%; object-fit:cover; }
+.tree-card-copy { display:flex; min-width:0; flex-direction:column; gap:.35rem; }
+.tree-card-copy > span { margin:0; color:var(--muted); font-size:.72rem; line-height:1.3; }
+.family-canvas canvas { display: block; width: 100% !important; height: 100% !important; min-height: 100vh; pointer-events:none; }
+
+/* view switcher with seven views */
+.archive-view-switcher button { min-width:2.9rem; white-space:nowrap; font-size:.72rem; padding:.4rem .55rem; }
+
+/* person search */
+.tree-search { position:relative; }
+.tree-search input { width:12.5rem; border:1px solid var(--line); border-radius:999px; background:rgba(44,44,46,.75); color:var(--ink);
+  padding:.42rem .9rem; font-size:.8rem; color:var(--ink); }
+.tree-search input:focus { outline:2px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+.tree-search-results { position:absolute; right:0; top:2.4rem; z-index:60; width:17rem; overflow:hidden;
+  border:1px solid var(--line); border-radius:.9rem; background:var(--card); box-shadow:0 18px 50px rgba(0,0,0,.45); }
+.tree-search-results button { display:flex; width:100%; align-items:baseline; justify-content:space-between; gap:.75rem;
+  padding:.55rem .9rem; text-align:left; font-size:.82rem; }
+.tree-search-results button:hover { background:var(--wash); }
+.tree-search-results button span { color:var(--muted); font-size:.72rem; white-space:nowrap; }
+
+/* focus (person-centered) view */
+.focus-view { position:absolute; inset:0; overflow:auto; padding:6.5rem 2rem 4rem; }
+
+/* outline (list) view */
+.outline-view { position:absolute; inset:0; overflow:auto; padding:6.5rem 2.5rem 4rem; font-size:.9rem; }
+.outline-view details, .outline-view .outline-leaf { margin:.1rem 0; }
+.outline-view .outline-kids { margin-left:.55rem; border-left:1px solid var(--line); padding-left:1rem; }
+.outline-view summary { cursor:pointer; list-style:none; }
+.outline-view summary::-webkit-details-marker { display:none; }
+.outline-view summary::before { content:'▾'; display:inline-block; width:1.05em; color:var(--muted); font-size:.8em; }
+.outline-view details:not([open]) > summary::before { content:'▸'; }
+.outline-leaf { padding-left:1.05em; }
+.outline-name { font-weight:600; }
+.outline-name:hover, .outline-spouse button:hover { color:var(--accent); }
+.outline-years { color:var(--muted); font-size:.78em; margin-left:.45em; }
+.outline-spouse { color:var(--muted); margin-left:.7em; font-size:.9em; }
+.outline-spouse button { font-weight:500; }
+
+/* branch folding chips on the full tree */
+.branch-chip { position:absolute; z-index:3; transform:translate(-50%,0); pointer-events:auto;
+  border:1px solid rgba(255,255,255,.16); border-radius:999px; background:var(--card); color:var(--ink);
+  padding:.14rem .6rem; font-size:.72rem; font-weight:600; box-shadow:0 4px 14px rgba(0,0,0,.35); cursor:pointer; }
+.branch-chip:hover { border-color:var(--accent); color:var(--accent); }
+
+/* family view toolbar */
+.focus-toolbar { display:flex; align-items:center; justify-content:center; gap:1rem; margin-bottom:1.2rem; }
+.focus-back { border:1px solid var(--line); border-radius:999px; background:rgba(44,44,46,.85); padding:.32rem .9rem; font-size:.78rem; font-weight:600; color:var(--ink); }
+.focus-back:disabled { opacity:.4; }
+.focus-back:not(:disabled):hover { border-color:var(--accent); color:var(--accent); }
+.focus-hint { color:var(--muted); font-size:.74rem; }
+
+/* fill-in review queue */
+.fill-view { position:absolute; inset:0; overflow:auto; padding:6.5rem 2rem 4rem; display:flex; flex-direction:column; align-items:center; gap:1.2rem; }
+.fill-progress { color:var(--muted); font-size:.85rem; }
+.fill-progress strong { color:var(--ink); }
+.fill-done { border:1px solid var(--line); border-radius:1rem; background:rgba(44,44,46,.9); padding:2rem 2.5rem; color:var(--ink); }
+.fill-context { color:var(--muted); font-size:.8rem; }
+.fill-fields { display:flex; flex-direction:column; gap:.7rem; }
+.fill-field { display:flex; flex-direction:column; gap:.25rem; }
+.fill-field label { font-size:.72rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; color:var(--muted); }
+.fill-field label em { font-weight:400; text-transform:none; letter-spacing:0; }
+.fill-input { border:1px solid var(--line); border-radius:.6rem; padding:.5rem .75rem; font-size:.9rem; background:var(--card); }
+.fill-gender { display:flex; gap:.5rem; }
+.fill-gender button { border:1px solid var(--line); border-radius:.6rem; padding:.45rem .9rem; font-size:.85rem; background:var(--card); }
+.fill-gender button.is-active { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 20%,transparent); color:var(--accent); font-weight:700; }
+.fill-actions { display:flex; align-items:center; gap:.75rem; }
+.fill-save { border-radius:999px; background:var(--ink); color:white; padding:.5rem 1.4rem; font-size:.85rem; font-weight:700; }
+.fill-save:disabled { opacity:.5; }
+.fill-skip { border:1px solid var(--line); border-radius:999px; padding:.5rem 1.1rem; font-size:.82rem; color:var(--muted); }
+.fill-skip:hover { color:var(--ink); }
+.fill-notice { color:var(--muted); font-size:.8rem; }
+.fill-footnote { max-width:34rem; color:var(--muted); font-size:.76rem; text-align:center; }
+
+/* Ancestry-style pedigree (Family view) */
+.ped-view { padding:5.6rem 1.5rem 3rem; }
+.ped-stage { position:relative; margin:0 auto; max-width:76rem; min-height:24rem; }
+.ped-lines { position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
+.ped-lines path { fill:none; stroke:rgba(235,235,245,.24); stroke-width:1.5; }
+.ped-columns { position:relative; display:flex; justify-content:center; gap:3.2rem; }
+.ped-col { display:flex; flex-direction:column; justify-content:center; gap:.55rem; min-width:13rem; }
+.ped-col-label { color:var(--muted); font-size:.66rem; font-weight:700; letter-spacing:.09em; text-transform:uppercase; margin-bottom:.15rem; }
+.ped-none { color:var(--muted); font-size:.78rem; }
+.ped-card button { display:flex; width:100%; align-items:center; gap:.6rem; border:1px solid rgba(255,255,255,.1); border-radius:.7rem;
+  background:var(--card); padding:.5rem .7rem; text-align:left; box-shadow:0 6px 18px rgba(0,0,0,.35); transition:border-color .12s, box-shadow .12s; }
+.ped-card button:hover { border-color:var(--accent); box-shadow:0 10px 26px rgba(0,0,0,.4); }
+.ped-copy { display:flex; flex-direction:column; min-width:0; }
+.ped-copy strong { font-size:.82rem; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.ped-copy > span { color:var(--muted); font-size:.7rem; }
+.ped-place { color:var(--muted); font-size:.66rem; }
+.ped-card-sm > button { padding:.35rem .55rem; box-shadow:none; }
+.ped-card-sm .ped-copy strong { font-size:.74rem; }
+.ped-portrait { display:flex; height:2.1rem; width:2.1rem; flex:none; align-items:center; justify-content:center; border-radius:999px; overflow:hidden; }
+.ped-card-sm .ped-portrait { height:1.6rem; width:1.6rem; }
+.ped-portrait svg { width:68%; height:68%; }
+.ped-portrait circle, .ped-portrait path { fill:currentColor; }
+.ped-male { background:rgba(125,146,181,.22); color:#a3b8d8; }
+.ped-female { background:rgba(200,130,155,.2); color:#d9a8bb; }
+.ped-unknown { background:rgba(255,255,255,.1); color:#9a9aa1; }
+.ped-photo img { height:100%; width:100%; object-fit:cover; }
+.ped-ghost button { border-style:dashed; background:rgba(44,44,46,.55); color:var(--muted); font-size:.74rem; justify-content:center; box-shadow:none; }
+.ped-ghost button:hover { color:var(--accent); }
+.ped-couple { display:flex; flex-direction:column; gap:.45rem; }
+.ped-spouse { display:flex; align-items:center; gap:.35rem; }
+.ped-marriage { color:#b98a44; font-size:.95rem; flex:none; }
+.ped-siblings { margin-top:1rem; border-top:1px dashed var(--line); padding-top:.6rem; }
+.ped-siblings summary { cursor:pointer; color:var(--muted); font-size:.74rem; font-weight:700; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.4rem; }
+.ped-siblings .ped-card { margin:.3rem 0; }
+.ped-group-label { color:var(--muted); font-size:.7rem; font-style:italic; margin:.3rem 0 .1rem; }
+
+/* inline editing in the profile */
+.inline-edit { text-align:left; border-radius:.35rem; padding:0 .15rem; transition:background .12s; }
+.inline-edit:hover { background:rgba(255,255,255,.07); outline:1px dashed rgba(255,255,255,.28); }
+.inline-edit.is-empty { color:var(--muted); font-style:italic; }
+.inline-input { font:inherit; padding:.15rem .4rem; max-width:14rem; }
+.inline-input-multiline { width:100%; min-height:7rem; font-size:.9rem; }
+.fact-line { line-height:1.7; }
+.person-gender-row { display:flex; gap:.4rem; margin-top:.4rem; }
+.gender-pick { border:1px solid var(--line); border-radius:999px; padding:.2rem .7rem; font-size:.74rem; color:var(--muted); background:var(--card); }
+.gender-pick.is-active { border-color:color-mix(in srgb,var(--accent) 45%,transparent); background:color-mix(in srgb,var(--accent) 20%,transparent); color:var(--accent); font-weight:700; }
+.gender-pick:disabled { cursor:default; }
+.person-biography-block { margin:1rem 0; }
+.bio-link { color:var(--accent); font-weight:600; }
+.bio-link:hover { text-decoration:underline; }
+.bio-editor { display:flex; flex-direction:column; gap:.5rem; }
+.marriage-status { margin-left:.2rem; border:1px solid var(--line); border-radius:.5rem; font-size:.7rem; padding:.15rem .25rem; color:var(--muted); background:var(--card); }
+.person-delete-footer { display:flex; gap:1rem; align-items:center; }
+.focus-nav { display:flex; gap:.3rem; }
+
+/* full-tree silhouettes */
+.tree-card-portrait { overflow:hidden; }
+.tree-card-portrait svg { width:66%; height:66%; }
+.tree-card-portrait circle, .tree-card-portrait path { fill:currentColor; }
+
+/* fill-in table */
+.fill-view { --fill-cols: 2.2rem minmax(0,1.1fr) minmax(0,1fr) 3.4rem 2.4rem minmax(7rem,1.1fr); }
+.fill-controls { width:min(52rem,100%); display:flex; align-items:center; gap:.6rem; }
+.fill-search { flex:1; min-width:0; border:1px solid var(--line); border-radius:999px; padding:.55rem 1rem; font-size:.9rem; background:var(--card); }
+.fill-gen-filter { border:1px solid var(--line); border-radius:999px; padding:.5rem .9rem; font-size:.82rem; background:var(--card); color:var(--ink); }
+.fill-table-head { width:min(52rem,100%); display:grid; grid-template-columns:var(--fill-cols); gap:.7rem; align-items:center; padding:0 .9rem; margin-bottom:-.6rem; }
+.fill-th { display:inline-flex; align-items:center; gap:.3rem; padding:.3rem 0; font-size:.62rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); text-align:left; justify-self:start; }
+.fill-th:hover { color:var(--ink); }
+.fill-th.is-active { color:var(--accent); }
+.fill-th-dir { font-size:.5rem; }
+.fill-list { width:min(52rem,100%); display:flex; flex-direction:column; gap:.45rem; }
+.fill-row { border:1px solid rgba(255,255,255,.09); border-radius:.9rem; background:rgba(44,44,46,.95); }
+.fill-row.is-open { border-color:var(--accent); box-shadow:0 12px 34px rgba(0,0,0,.35); }
+.fill-row-head { display:grid; width:100%; grid-template-columns:var(--fill-cols); align-items:center; gap:.7rem; padding:.6rem .9rem; text-align:left; }
+.fill-row-head .ped-portrait { height:2rem; width:2rem; flex:none; }
+.fill-cell { font-size:.86rem; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.fill-cell-year, .fill-cell-gen { color:var(--muted); font-size:.8rem; font-variant-numeric:tabular-nums; }
+.fill-gen-head { width:min(52rem,100%); padding:.8rem .2rem 0; font-size:.68rem; font-weight:600; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); }
+.fill-row-missing { color:#dda65f; font-size:.66rem; font-weight:600; min-width:0; overflow:hidden; text-overflow:ellipsis; }
+.fill-context { color:var(--muted); font-size:.74rem; margin-bottom:.5rem; }
+.fill-row .fill-fields { padding:0 .9rem .8rem; border-top:1px dashed var(--line); margin-top:.1rem; padding-top:.7rem; }
+@media (max-width: 768px) {
+  .fill-view { --fill-cols: 2.2rem minmax(0,1.1fr) minmax(0,1fr) 3.4rem; }
+  .fill-th-generation, .fill-cell-gen, .fill-th-missing, .fill-row-missing { display:none; }
+}
+
+/* ============ design pass: editorial warmth, depth, and motion ============ */
+
+/* film grain on paper */
+.grain-overlay { position:fixed; inset:0; z-index:80; pointer-events:none; opacity:.05; mix-blend-mode:screen;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E"); }
+
+/* typographic foundations */
+body { font-family: var(--font-sans), "Avenir Next", sans-serif; -webkit-font-smoothing: antialiased; }
+h1, h2, h3 { text-wrap: balance; }
+.eyebrow { letter-spacing:.16em; font-size:.62rem; }
+.ped-copy > span, .fill-cell, .outline-years, .tree-card-copy span, .person-facts, .fact-line { font-variant-numeric: tabular-nums; }
+
+/* floating island header */
+.site-action-bar { left:446px; right:16px; top:12px; height:3.4rem; border:1px solid rgba(255,255,255,.08); border-bottom:1px solid rgba(255,255,255,.08);
+  border-radius:1.1rem; background:rgba(24,24,26,.75); box-shadow:0 1px 2px rgba(var(--shadow-tint),.05), 0 14px 40px rgba(var(--shadow-tint),.09); }
+.site-action-bar.is-chat-collapsed { left:16px; }
+
+/* one motion language */
+button, .ped-card > button, .tree-search input, .focus-back { transition: transform .45s var(--ease), box-shadow .45s var(--ease), border-color .3s var(--ease), background-color .3s var(--ease), color .3s var(--ease); }
+button:active:not(:disabled) { transform: scale(.98); }
+:focus-visible { outline:2px solid color-mix(in srgb, var(--accent) 55%, transparent); outline-offset:2px; border-radius:.4rem; }
+
+/* connector recolor to the warm palette */
+.parent-connector { stroke: var(--parent-line); }
+.spouse-connector { stroke: var(--marriage-line); }
+.spouse-connector.is-ended { opacity:.45; stroke-dasharray:2 6; }
+.legend-swatch { border-top-color: var(--parent-line); }
+.legend-swatch.legend-marriage { border-top-color: var(--marriage-line); }
+.ped-lines path { stroke:rgba(235,235,245,.24); }
+
+/* canvas atmosphere */
+#viewport, .family-canvas { background: var(--stage) !important; }
+
+/* silhouettes in the warm palette */
+.ped-male { background:rgba(120,145,185,.2); color:#a7bee0; }
+.ped-female { background:rgba(200,135,160,.2); color:#dfa9bd; }
+.ped-unknown { background:rgba(255,255,255,.1); color:#9a9aa1; }
+
+/* cards: hairline + diffused tinted shadow + lift */
+.tree-card, .ped-card button, .fill-row, .tree-search-results {
+  border-color: rgba(255,255,255,.09); }
+.tree-card { background:rgba(44,44,46,.92); box-shadow:0 1px 2px rgba(0,0,0,.3), 0 16px 36px rgba(0,0,0,.35); }
+.tree-card:hover { box-shadow:0 2px 4px rgba(var(--shadow-tint),.07), 0 24px 52px rgba(var(--shadow-tint),.14); }
+.ped-card > button { background:#2c2c2e; box-shadow:0 1px 2px rgba(var(--shadow-tint),.05), 0 10px 28px rgba(var(--shadow-tint),.08); border-radius:.85rem; }
+.ped-card > button:hover { transform: translateY(-1px); border-color: color-mix(in srgb, var(--accent) 45%, transparent); box-shadow:0 2px 4px rgba(var(--shadow-tint),.06), 0 18px 40px rgba(var(--shadow-tint),.13); }
+/* pedigree breathing room (the children column was cramped) */
+.ped-col { gap:.9rem; }
+.ped-group { display:flex; flex-direction:column; gap:.9rem; }
+.ped-card-md > button { padding:.62rem .8rem; }
+.ped-columns { gap:3.6rem; }
+.ped-col-label { margin-bottom:.35rem; }
+
+/* staggered entry: columns cascade in with a soft rise */
+@keyframes rise-in { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:translateY(0); } }
+@media (prefers-reduced-motion: no-preference) {
+  .ped-col-children { animation: rise-in .7s var(--ease) both .05s; }
+  .ped-col-focal { animation: rise-in .7s var(--ease) both .12s; }
+  .ped-col-parents { animation: rise-in .7s var(--ease) both .2s; }
+  .ped-col-grand { animation: rise-in .7s var(--ease) both .28s; }
+  .ped-lines { animation: rise-in .9s var(--ease) both .3s; }
+  .person-modal-v2 { animation: rise-in .5s var(--ease) both; }
+}
+
+/* skeleton loading instead of a blank pane */
+.family-canvas[aria-busy="true"] { position:relative; overflow:hidden; }
+.family-canvas[aria-busy="true"]::after { content:""; position:absolute; inset:0;
+  background-image:
+    linear-gradient(90deg, transparent 0%, rgba(255,255,255,.07) 50%, transparent 100%),
+    radial-gradient(closest-side, rgba(255,255,255,.05) 98%, transparent) ,
+    radial-gradient(closest-side, rgba(255,255,255,.05) 98%, transparent),
+    radial-gradient(closest-side, rgba(255,255,255,.05) 98%, transparent);
+  background-size: 40% 100%, 240px 88px, 240px 88px, 240px 88px;
+  background-position: -40% 0, calc(50% - 300px) 42%, 50% 42%, calc(50% + 300px) 42%;
+  background-repeat:no-repeat;
+  animation: shimmer 1.6s var(--ease) infinite; }
+@keyframes shimmer { from { background-position:-40% 0, calc(50% - 300px) 42%, 50% 42%, calc(50% + 300px) 42%; } to { background-position:140% 0, calc(50% - 300px) 42%, 50% 42%, calc(50% + 300px) 42%; } }
+
+/* search + switcher refinement */
+.tree-search input { background:rgba(44,44,46,.72); border-color:rgba(255,255,255,.1); }
+.tree-search input:focus { background:var(--card); }
+.archive-view-switcher { border-color:rgba(255,255,255,.08); background:rgba(44,44,46,.55); border-radius:.8rem; }
+.archive-view-switcher button.is-active { box-shadow:0 1px 4px rgba(var(--shadow-tint),.14); }
+
+/* drawer polish */
+.person-modal-v2 { border-right:1px solid rgba(255,255,255,.08); box-shadow:24px 0 80px rgba(var(--shadow-tint),.12); }
+.person-modal-v2 h2 { letter-spacing:-.01em; }
+/* profile prev/next */
+.person-nav { position:absolute; right:3.4rem; top:1rem; display:flex; gap:.25rem; z-index:2; }
+.person-nav button { height:2rem; width:2rem; border:1px solid rgba(255,255,255,.1); border-radius:999px; background:#2c2c2e;
+  color:var(--muted); font-size:1.05rem; line-height:1; display:flex; align-items:center; justify-content:center; }
+.person-nav button:hover { color:var(--accent); border-color:color-mix(in srgb, var(--accent) 45%, transparent); }
+.fill-bio { color:var(--muted); font-size:.78rem; line-height:1.55; border-left:2px solid var(--line); padding-left:.7rem; }
+
+/* settings page */
+.settings-gear { display:inline-flex; height:2rem; width:2rem; align-items:center; justify-content:center; border-radius:.55rem; color:var(--muted); font-size:1.05rem; line-height:1; text-decoration:none; }
+.settings-gear:hover { color:var(--ink); background:var(--wash); }
+.settings-page { min-height:100dvh; background:var(--paper); color:var(--ink); padding:1.4rem clamp(1rem,4vw,3rem) 5rem; }
+.settings-masthead { display:flex; align-items:center; justify-content:space-between; max-width:44rem; margin:0 auto; }
+.settings-panel { max-width:44rem; margin:3.5rem auto 0; }
+.settings-eyebrow { color:var(--accent); text-transform:uppercase; font-weight:600; }
+.settings-panel h1 { margin:.3rem 0 1.6rem; font-family:var(--font-serif),Georgia,serif; font-size:clamp(1.9rem,4vw,2.6rem); font-weight:500; letter-spacing:-.02em; }
+.settings-card { border:1px solid var(--line); border-radius:1.1rem; background:rgba(44,44,46,.88); padding:1.3rem 1.4rem; margin-bottom:1rem; box-shadow:0 1px 2px rgba(var(--shadow-tint),.05), 0 10px 30px rgba(var(--shadow-tint),.06); }
+.settings-card h2 { margin:0 0 .3rem; font-family:var(--font-serif),Georgia,serif; font-size:1.25rem; font-weight:600; }
+.settings-card p { margin:.2rem 0; line-height:1.6; font-size:.92rem; }
+.settings-hint { color:var(--muted); font-size:.82rem; }
+.settings-error { margin:.6rem 0; border-radius:.7rem; background:rgba(226,140,115,.14); color:#e8a289; padding:.6rem .9rem; font-size:.85rem; }
+.settings-signin-row { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:1rem; }
+.settings-signin { display:inline-flex; align-items:center; gap:.45rem; border-radius:999px; background:black; color:white; padding:.6rem 1.2rem; font-size:.88rem; font-weight:600; text-decoration:none; transition:background-color .3s var(--ease); }
+.settings-signin:hover { background:var(--accent); }
+.settings-signin.is-google { background:var(--card); color:var(--ink); border:1px solid var(--line); }
+.settings-signin.is-google:hover { border-color:var(--accent); color:var(--accent); background:var(--wash); }
+.settings-signin.is-google span { display:inline-flex; height:1.15rem; width:1.15rem; align-items:center; justify-content:center; border-radius:999px; border:1px solid currentColor; font-size:.72rem; font-weight:700; }
+.settings-identity { display:flex; align-items:center; gap:1rem; }
+.settings-identity > div { display:flex; flex-direction:column; min-width:0; flex:1; }
+.settings-identity strong { font-size:.95rem; }
+.settings-identity span { color:var(--muted); font-size:.8rem; overflow:hidden; text-overflow:ellipsis; }
+.settings-role-badge { border-radius:999px; padding:.25rem .75rem; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.12em; }
+.settings-role-badge.is-admin { background:color-mix(in srgb,var(--accent) 22%,transparent); color:var(--accent); }
+.settings-role-badge.is-editor { background:rgba(125,146,181,.22); color:#a7bee0; }
+.settings-role-badge.is-none { background:var(--wash); color:var(--muted); }
+.settings-signout { color:var(--muted); font-size:.82rem; text-decoration:none; white-space:nowrap; }
+.settings-signout:hover { color:var(--ink); }
+.settings-members { list-style:none; margin:.9rem 0; padding:0; display:flex; flex-direction:column; gap:.4rem; }
+.settings-members li { display:flex; align-items:center; gap:.7rem; border:1px solid var(--line); border-radius:.8rem; background:var(--card); padding:.55rem .8rem; }
+.settings-member-email { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; font-size:.88rem; }
+.settings-member-email em { color:var(--muted); font-style:normal; font-size:.75rem; }
+.settings-members select, .settings-add select { border:1px solid var(--line); border-radius:.6rem; background:var(--card); padding:.35rem .5rem; font-size:.8rem; color:var(--ink); }
+.settings-remove { display:inline-flex; height:1.7rem; width:1.7rem; align-items:center; justify-content:center; border-radius:.55rem; color:var(--muted); font-size:1.05rem; line-height:1; }
+.settings-remove:hover:not(:disabled) { background:rgba(226,140,115,.14); color:#e8a289; }
+.settings-add { display:flex; gap:.55rem; margin-top:1rem; flex-wrap:wrap; }
+.settings-add input { flex:1; min-width:14rem; border:1px solid var(--line); border-radius:.7rem; padding:.5rem .8rem; font-size:.88rem; background:var(--card); }
+.settings-add button { border-radius:999px; background:var(--ink); color:white; padding:.5rem 1.1rem; font-size:.82rem; font-weight:600; }
+.settings-add button:hover:not(:disabled) { background:var(--accent); }
+.settings-add button:disabled { opacity:.5; cursor:default; }
+
+/* linked sign-ins */
+.settings-identity-list { list-style:none; margin:.9rem 0; padding:0; display:flex; flex-direction:column; gap:.4rem; }
+.settings-identity-list li { display:flex; align-items:center; gap:.7rem; border:1px solid var(--line); border-radius:.8rem; background:var(--card); padding:.55rem .8rem; }
+.settings-provider { border-radius:999px; background:var(--wash); color:var(--muted); padding:.2rem .65rem; font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; white-space:nowrap; }
+.settings-member-links { display:block; margin-top:.15rem; }
+.settings-member-link { display:inline-flex; align-items:center; gap:.25rem; margin-right:.7rem; color:var(--muted); font-size:.74rem; }
+.settings-unlink { display:inline-flex; height:1.15rem; width:1.15rem; align-items:center; justify-content:center; border-radius:.35rem; color:var(--muted); font-size:.8rem; line-height:1; }
+.settings-unlink:hover:not(:disabled) { background:rgba(226,140,115,.14); color:#e8a289; }
+
+/* site access */
+.settings-visibility { display:grid; grid-template-columns:1fr 1fr; gap:.6rem; margin-top:.9rem; }
+.settings-visibility-option { display:flex; flex-direction:column; gap:.25rem; border:1px solid var(--line); border-radius:.9rem; background:var(--card); padding:.85rem 1rem; text-align:left; }
+.settings-visibility-option strong { font-size:.88rem; }
+.settings-visibility-option span { color:var(--muted); font-size:.76rem; line-height:1.45; }
+.settings-visibility-option.is-active { border-color:var(--accent); box-shadow:0 0 0 1px var(--accent) inset; }
+.settings-visibility-option.is-active strong { color:var(--accent); }
+.settings-role-badge.is-viewer { background:var(--wash); color:var(--muted); }
+.visit-gate .settings-panel { margin-top:22vh; }
+@media (max-width: 640px) { .settings-visibility { grid-template-columns:1fr; } }
+
+/* ============ batch: profile panel, chat context, family panning ============ */
+
+/* profile as an in-flow panel that pushes content, square corners */
+.person-panel { position:relative; z-index:20; height:100%; max-height:none; width:min(100%,30rem); flex:0 0 min(100%,30rem); overflow-y:auto; border:0; border-right:1px solid var(--line); border-radius:0; padding:2.5rem; box-shadow:12px 0 40px rgba(var(--shadow-tint),.1); }
+@media (max-width: 900px) { .person-panel { position:fixed; inset:0 auto 0 0; z-index:60; width:min(100%,26rem); flex:none; } }
+
+/* editable affordance: bold + accent hover on every inline-editable field */
+.inline-edit { font-weight:650; }
+.inline-edit:hover { color:var(--accent); }
+.person-biography.is-editable { cursor:pointer; border-radius:.6rem; padding:.4rem .5rem; margin:-.4rem -.5rem; transition:background .15s; }
+.person-biography.is-editable:hover { background:rgba(255,255,255,.07); outline:1px dashed rgba(255,255,255,.28); }
+.bio-add { display:block; width:100%; padding:.9rem .8rem; border:1px dashed var(--line); border-radius:.7rem; text-align:left; }
+
+/* hero stacked: name first, photo below */
+.person-modal-hero.is-stacked { flex-direction:column; align-items:flex-start; gap:.9rem; }
+.person-maiden { margin:.1rem 0 0; color:var(--muted); font-size:.92rem; font-style:italic; }
+/* chat sidebar: resizable, driven by --chat-width */
+.chat-sidebar { width:var(--chat-width,480px); flex:0 0 var(--chat-width,480px); }
+.chat-resize-handle { position:absolute; top:0; right:-3px; bottom:0; width:7px; cursor:col-resize; z-index:35; }
+.chat-resize-handle:hover { background:linear-gradient(to right, transparent, rgba(67,104,79,.25), transparent); }
+.site-action-bar { left:calc(var(--chat-width,480px) + 16px); }
+main.chat-collapsed .site-action-bar { left:16px; }
+
+/* example prompts in the empty thread */
+.chat-suggestions { display:flex; flex-direction:column; align-items:flex-start; gap:.45rem; margin-top:1rem; }
+.chat-suggestion { border:1px solid var(--line); border-radius:999px; background:var(--card); padding:.5rem .9rem; font-size:.8rem; color:var(--ink); text-align:left; transition:border-color .2s, color .2s; }
+.chat-suggestion:hover { border-color:var(--accent); color:var(--accent); }
+
+/* family stage panning */
+.ped-view { overflow:hidden; }
+/* dragging must never start a text selection - the canvas had this from day
+   one, the pedigree stage shipped without it */
+.ped-stage { touch-action:none; overscroll-behavior:contain; -webkit-user-select:none; user-select:none; }
+.ped-stage[data-panning="true"] { cursor:grabbing; }
+.ped-pan { position:relative; }
+.ped-pan.is-glide { transition:transform .5s var(--ease); }
+.ped-col-label { display:block; border:0; background:transparent; padding:0; text-align:left; cursor:pointer; }
+.ped-col-label:hover { color:var(--accent); }
+@media (pointer: fine) {
+  .ped-stage[data-custom-cursor="true"], .ped-stage[data-custom-cursor="true"] * { cursor:none !important; }
+  .ped-stage[data-custom-cursor="true"] .tree-custom-cursor { display:block; }
+  .ped-stage[data-custom-cursor="true"] .tree-custom-cursor[data-visible="true"] { opacity:1; }
+}
+
+/* fill-in rows: fold affordance */
+.fill-row-head { position:relative; padding-right:2rem; }
+.fill-row-head::after { content:"▸"; position:absolute; right:.8rem; top:50%; transform:translateY(-50%); color:var(--muted); font-size:.7rem; }
+.fill-row.is-open .fill-row-head::after { content:"▾"; }
+
+/* settings restructure */
+.settings-back-pill { display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--line); border-radius:999px; background:var(--card); padding:.55rem 1.1rem; color:var(--ink); font-size:.85rem; font-weight:600; text-decoration:none; transition:border-color .2s, color .2s; }
+.settings-back-pill:hover { border-color:var(--accent); color:var(--accent); }
+.settings-identity { display:flex; align-items:center; gap:1rem; margin-bottom:1rem; }
+
+/* family stage centering + toolbar alignment */
+.ped-view { display:flex; flex-direction:column; }
+.ped-stage { flex:1; min-height:0; height:auto; max-width:none; margin:0; display:flex; align-items:center; justify-content:center; }
+.ped-pan { flex:none; }
+.focus-toolbar { display:flex; align-items:center; justify-content:flex-start; gap:1rem; }
+.focus-toolbar .focus-hint { margin:0; }
+
+@media (max-width: 1100px) {
+  .tree-search input { width:9rem; }
+}
+
+/* tabs as a real flex item so the header can never overlap them */
+.site-action-bar .archive-view-switcher { position:static; transform:none; }
+
+/* legal pages */
+.legal-page h2 { margin:1.1rem 0 .2rem; font-family:var(--font-serif),Georgia,serif; font-size:1.15rem; font-weight:600; }
+.legal-page p { margin:.35rem 0; }
+
+/* family view: uniform cards, selection highlight, progressive relayout */
+.ped-card.is-selected { border-color:var(--accent); box-shadow:0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent), 0 14px 34px rgba(var(--shadow-tint),.14); }
+/* a child of .ped-view, not of the padded .ped-stage: an offset inside the
+   stage is measured from the padding, which pushed it off the corner */
+.ped-zoom { position:absolute; right:.6rem; bottom:.6rem; z-index:5; }
+
+/* the action bar yields to the profile panel instead of covering it */
+main.has-person .site-action-bar { left:calc(var(--chat-width,330px) + 30rem + 16px); }
+main.chat-collapsed.has-person .site-action-bar { left:calc(30rem + 16px); }
+@media (max-width: 900px) { main.has-person .site-action-bar, main.chat-collapsed.has-person .site-action-bar { left:calc(var(--chat-width,480px) + 16px); } main.chat-collapsed.has-person .site-action-bar { left:16px; } }
+
+/* hover preview: slides over the profile slot */
+.person-hover-preview { position:fixed; top:0; bottom:0; left:var(--chat-width,480px); z-index:40; width:min(100%,30rem); overflow:hidden; animation:preview-in .25s var(--ease) both; pointer-events:none; }
+@media (max-width: 900px) { .person-hover-preview { left:0; z-index:65; } }
+main.chat-collapsed .person-hover-preview { left:0; }
+@keyframes preview-in { from { opacity:0; transform:translateX(-14px); } to { opacity:1; transform:none; } }
+/* the shell hosts the real profile panel; the panel fills it and loses its
+   own placement, and the dead nav chrome hides while keeping its space */
+.person-hover-preview .person-panel { position:absolute; inset:0; width:auto; animation:none; }
+.person-hover-preview .person-panel-bar > * { visibility:hidden; }
+
+/* ============ closing pass: Maps-style panel language ============ */
+
+/* facts as a Maps-style stat strip */
+.person-modal-v2 .person-facts { display:grid; grid-template-columns:1fr 1fr; gap:0; border:1px solid var(--line); border-radius:1rem; background:var(--card); overflow:visible; margin-bottom:1.4rem; }
+.person-modal-v2 .person-facts > div { padding:.85rem 1rem; }
+.person-modal-v2 .person-facts > div + div { border-left:1px solid var(--line); }
+.person-modal-v2 .person-facts .eyebrow { color:var(--accent); font-weight:700; }
+
+/* settings + fill primaries follow the accent language */
+.settings-signin { background:var(--accent-fill); }
+.settings-signin:hover { background:#365844; }
+.settings-add button, .fill-save, .relative-add-button { background:var(--accent-fill) !important; color:white; }
+.settings-add button:hover:not(:disabled), .fill-save:hover:not(:disabled), .relative-add-button:hover:not(:disabled) { background:#365844 !important; }
+
+/* ============ Maps-material pass: frosted panels, circular controls ============ */
+
+/* frosted glass for the two left panels and the hover preview */
+.chat-sidebar { background: color-mix(in srgb, var(--sidebar) 68%, transparent); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
+.person-panel { background: rgba(28,28,30,.62); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
+.person-hover-preview { background: rgba(28,28,30,.7); backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px); }
+
+/* one circular control cluster top-right: ‹ › × */
+.person-nav { right:1rem; top:1rem; gap:.4rem; }
+.person-nav button { height:2.2rem; width:2.2rem; border:0; border-radius:999px; background:rgba(255,255,255,.09); color:var(--ink); font-size:1.1rem; line-height:1; display:flex; align-items:center; justify-content:center; backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+.person-nav button:hover { background:rgba(255,255,255,.16); color:var(--ink); border:0; }
+.person-nav .person-nav-close { font-size:1.3rem; }
+
+/* Maps-style zoom: a vertical frosted +/− stack, no label */
+.canvas-controls { flex-direction:column-reverse; gap:0; padding:.2rem; border-radius:.9rem; background:rgba(28,28,30,.66); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+.canvas-controls button { height:2.2rem; width:2.2rem; min-width:2.2rem; font-size:1.25rem; color:var(--ink); }
+.canvas-controls button:hover { background:rgba(255,255,255,.1); }
+.canvas-controls .canvas-zoom-level { display:none; }
+.canvas-controls button:first-child { border-top:1px solid rgba(255,255,255,.08); border-radius:0 0 .7rem .7rem; }
+.canvas-controls button:last-child { border-radius:.7rem .7rem 0 0; }
+
+/* frosted refinements: heavier glass, fold pill beside the zoom stack */
+/* over the chat's text (not the canvas) the frost must be nearly solid,
+   or the words beneath ghost through */
+.person-panel { background: rgba(28,28,30,.94); }
+.person-hover-preview { background: rgba(28,28,30,.95); }
+.chat-sidebar { background: color-mix(in srgb, var(--sidebar) 84%, transparent); }
+
+/* panel entrance: transform only - an opacity keyframe can stick at half
+   strength when the tab is throttled mid-animation */
+@keyframes panel-in { from { transform: translateX(-14px); } to { transform: none; } }
+.person-panel { animation: panel-in .22s ease-out both; }
+.person-hover-preview { animation-name: preview-in-x; }
+@keyframes preview-in-x { from { transform: translateX(-14px); } to { transform: none; } }
+
+/* ============ Maps parity: docked bar, dense panel, rowed lists ============ */
+
+/* the action bar docks flush like Maps chrome - no island */
+.site-action-bar { top:0; height:3.6rem; right:0; border-radius:0; border:0; border-bottom:1px solid rgba(255,255,255,.09); box-shadow:none; left:var(--chat-width,480px); background:rgba(24,24,26,.72); }
+main.chat-collapsed .site-action-bar { left:0; }
+main.has-person .site-action-bar { left:var(--chat-width,480px); }
+main.chat-collapsed.has-person .site-action-bar { left:30rem; }
+@media (max-width: 900px) { main.has-person .site-action-bar { left:var(--chat-width,480px); } main.chat-collapsed.has-person .site-action-bar { left:0; } }
+
+/* hero: name + one subtitle line, Maps-style */
+.person-subtitle { margin:.3rem 0 0; color:var(--muted); font-size:.92rem; }
+.person-subtitle .person-maiden { margin:0; font-size:inherit; }
+.person-modal-hero.is-stacked { gap:.7rem; }
+.person-gender-row { margin-top:.5rem; }
+
+/* stat strip tightened */
+.person-modal-v2 .person-facts { margin:1.1rem 0 1.2rem; }
+.person-modal-v2 .person-facts > div { padding:.65rem .9rem; }
+.person-modal-v2 .person-facts .fact-line { font-size:.9rem; }
+
+/* relationships as full-width rowed cards */
+.modal-relationships { display:block; margin-top:1.4rem; border-top:0; padding-top:0; }
+.relationship-group { margin-top:1.1rem; padding:0; border-radius:0; }
+.relationship-rows { border:1px solid var(--line); border-radius:.9rem; background:rgba(44,44,46,.72); overflow:hidden; }
+.relationship-row { display:flex; align-items:center; gap:.5rem; padding-right:.6rem; }
+.relationship-row + .relationship-row { border-top:1px solid var(--line); }
+.relationship-row-main { display:flex; flex:1; min-width:0; align-items:center; justify-content:space-between; gap:.8rem; padding:.65rem .9rem; text-align:left; }
+.relationship-row-main:hover { background:var(--wash); }
+.relationship-row-main .rel-name { font-size:.9rem; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.relationship-row-main .rel-meta { color:var(--muted); font-size:.78rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+
+/* chat suggestions as a rowed card, not floating pills */
+.chat-suggestions { display:block; border:1px solid var(--line); border-radius:.9rem; background:rgba(44,44,46,.7); overflow:hidden; padding:0; margin-top:1rem; }
+.chat-suggestion { display:block; width:100%; border:0; border-radius:0; background:transparent; text-align:left; padding:.7rem .95rem; font-size:.85rem; }
+.chat-suggestion + .chat-suggestion { border-top:1px solid var(--line); }
+.chat-suggestion:hover { background:var(--wash); border-color:transparent; color:var(--ink); }
+
+/* ============ dark grammar: gradient stage, dark inputs ============ */
+.stage-bg { background: var(--stage) !important; }
+.modal-input, .fill-input, .fill-search, select, textarea { background: var(--card); color: var(--ink); border-color: var(--line); }
+select option { background: var(--card); color: var(--ink); }
+input::placeholder, textarea::placeholder { color: var(--muted); }
+.settings-signin.is-google { background: var(--card); color: var(--ink); }
+.settings-remove:hover:not(:disabled), .settings-unlink:hover:not(:disabled) { background: rgba(226,140,115,.14); }
+
+/* ============ Apple-parity pass: panel header, section grammar, focus chat ============ */
+
+/* the profile's controls live in their own sticky bar - never over the name */
+.person-panel { --panel-pad: 2.5rem; padding: 0 var(--panel-pad) var(--panel-pad); }
+@media (max-width: 639px) { .person-panel { --panel-pad: 1.25rem; } }
+.person-panel-bar { position:sticky; top:0; z-index:6; display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  margin:0 calc(var(--panel-pad) * -1) 1.2rem; padding:.7rem 1rem; background:rgba(28,28,30,.82);
+  backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); border-bottom:1px solid rgba(255,255,255,.08); }
+.person-panel .person-nav { position:static; right:auto; top:auto; }
+.person-panel-bar .person-nav-close { height:2.2rem; width:2.2rem; border:0; border-radius:999px; background:rgba(255,255,255,.09);
+  color:var(--ink); font-size:1.3rem; line-height:1; display:flex; align-items:center; justify-content:center; }
+.person-panel-bar .person-nav-close:hover { background:rgba(255,255,255,.16); }
+.person-modal-v2 h2 { padding-right:0; }
+
+/* section titles read like a Maps sidebar: sentence case, real size, air above */
+.person-modal-v2 .relationship-heading { min-height:2.1rem; margin:0 0 .55rem; gap:1.25rem; }
+.person-modal-v2 .relationship-heading .eyebrow { margin:0; color:var(--ink); font-size:.98rem; font-weight:650;
+  letter-spacing:-.005em; text-transform:none; }
+.relationship-group { margin-top:1.9rem; }
+.person-biography-block { margin:1.9rem 0 0; }
+.relationship-add { height:1.95rem; width:1.95rem; border:0; background:rgba(255,255,255,.09); color:var(--ink); font-size:1rem; }
+.relationship-add:hover { background:color-mix(in srgb,var(--accent) 30%,transparent); color:var(--accent); }
+.person-modal-v2 .person-facts .eyebrow { color:var(--muted); font-weight:600; }
+.person-modal-v2 .person-facts { margin:1.3rem 0 0; }
+.person-biography { margin-top:.2rem; font-size:1.05rem; line-height:1.75; }
+.person-delete-footer { margin-top:2.2rem; }
+
+/* the hint retires itself once you have clicked someone (or after five seconds) */
+.focus-hint { transition:opacity .6s var(--ease); }
+.focus-hint[data-visible="false"] { opacity:0; pointer-events:none; }
+
+/* chat: the selection is attached to the composer, Lovable-style */
+.composer-focus { display:flex; flex-direction:column; align-items:flex-start; gap:.35rem; margin:0 0 .7rem; padding:0 0 .7rem;
+  border-bottom:1px solid var(--line); }
+.composer-focus-chip { display:inline-flex; align-items:center; gap:.4rem; max-width:100%; padding:.22rem .3rem .22rem .28rem;
+  border:1px solid color-mix(in srgb,var(--accent) 38%,transparent); border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 14%,transparent); }
+.composer-focus-chip .ped-portrait { height:1.5rem; width:1.5rem; flex:none; }
+.composer-focus-chip strong { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.8rem; font-weight:650; letter-spacing:-.005em; }
+.composer-focus-clear { flex:none; display:inline-flex; height:1.25rem; width:1.25rem; align-items:center; justify-content:center;
+  border-radius:999px; color:var(--muted); font-size:.9rem; line-height:1; }
+.composer-focus-clear:hover { background:rgba(255,255,255,.14); color:var(--ink); }
+.composer-focus-note { color:var(--muted); font-size:.72rem; line-height:1.4; }
+
+/* the composer textarea sits at z-index 1; the send button must clear it or
+   the absolutely-positioned arrow is unclickable */
+.public-chat-composer > button { position:absolute; z-index:2; }
+
+/* markdown in the archivist's replies */
+.md > :first-child { margin-top:0; }
+.md > :last-child { margin-bottom:0; }
+.md p { margin:0 0 .55rem; }
+.md ul, .md ol { margin:0 0 .55rem; padding-left:1.15rem; display:flex; flex-direction:column; gap:.3rem; }
+.md ul li { list-style:disc outside; }
+.md ol li { list-style:decimal outside; }
+.md li::marker { color:var(--muted); }
+.md .md-heading { font-weight:650; margin:.7rem 0 .35rem; }
+.md code { border-radius:.3rem; background:rgba(255,255,255,.09); padding:.06rem .32rem;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:.9em; word-break:break-word; }
+.md strong { font-weight:650; }
+.public-chat-answer { white-space:normal; }
+
+/* one ＋ opens the attachment choices */
+.attach-menu { position:relative; }
+.composer-attach { display:inline-flex; height:2.25rem; width:2.25rem; align-items:center; justify-content:center;
+  border-radius:999px; background:rgba(255,255,255,.09); color:var(--ink); font-size:1.15rem; line-height:1; }
+.composer-attach:hover, .composer-attach[aria-expanded="true"] { background:color-mix(in srgb,var(--accent) 30%,transparent); color:var(--accent); }
+.attach-popover { position:absolute; left:0; bottom:calc(100% + .5rem); z-index:20; min-width:11.5rem; border:1px solid var(--line);
+  border-radius:.85rem; background:rgba(44,44,46,.96); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+  padding:.3rem; box-shadow:0 18px 44px rgba(0,0,0,.5); animation:panel-pop .16s var(--ease) both; }
+@keyframes panel-pop { from { transform:translateY(6px); } to { transform:none; } }
+.attach-popover button { display:flex; align-items:center; gap:.6rem; width:100%; border-radius:.6rem; padding:.55rem .7rem;
+  text-align:left; font-size:.85rem; font-weight:600; color:var(--ink); }
+.attach-popover button:hover { background:var(--wash); }
+.attach-popover svg { width:1rem; height:1rem; flex:none; fill:none; stroke:currentColor; stroke-width:1.6; stroke-linecap:round; stroke-linejoin:round; }
+
+/* Apple-grade text: tighter display tracking, quieter secondary lines */
+.person-modal-v2 h2, .archive-view-heading h2 { letter-spacing:-.02em; }
+.chat-bubble, .chat-suggestion, .relationship-row-main .rel-name { letter-spacing:-.005em; }
+.ped-col-label { color:var(--muted); font-size:.68rem; letter-spacing:.07em; font-weight:600; }
+.ped-copy > span, .ped-place { color:var(--muted); }
+.person-delete-button, .photo-remove-button, .relationship-remove { color:var(--danger); }
+
+/* stories on a person's record - the archive's histories are Persian prose */
+.person-stories { margin-top:1.9rem; }
+.story-card { border:1px solid var(--line); border-radius:.9rem; background:rgba(44,44,46,.72); overflow:hidden; }
+.story-card + .story-card { margin-top:.5rem; }
+.story-card > summary { display:flex; align-items:center; justify-content:space-between; gap:.75rem; padding:.7rem .9rem;
+  cursor:pointer; list-style:none; font-size:.9rem; font-weight:600; letter-spacing:-.005em; }
+.story-card summary::-webkit-details-marker { display:none; }
+.story-card > summary::after { content:"▸"; color:var(--muted); font-size:.7rem; font-weight:400; }
+.story-card[open] > summary::after { content:"▾"; }
+.story-card[open] > summary { border-bottom:1px solid var(--line); }
+.story-title { min-width:0; }
+.story-year { color:var(--muted); font-size:.78rem; font-weight:500; font-variant-numeric:tabular-nums; margin-left:auto; }
+.story-body { margin:0; padding:.9rem; white-space:pre-wrap; font-size:.95rem; line-height:2; }
+.story-body[dir="rtl"], .story-card [dir="auto"]:lang(fa) { text-align:right; }
+.story-source { margin:0; padding:0 .9rem .8rem; color:var(--muted); font-size:.72rem; }
+.story-original { border-top:1px solid var(--line); }
+.story-original summary { padding:.6rem .9rem; cursor:pointer; list-style:none; color:var(--muted); font-size:.78rem; font-weight:600; }
+.story-original summary::-webkit-details-marker { display:none; }
+.story-original summary::before { content:"▸ "; font-size:.7rem; }
+.story-original[open] summary::before { content:"▾ "; }
+.story-original summary:hover { color:var(--ink); }
+.story-original .story-body { padding-top:0; }
+
+/* the Fill-in review queue: questions the family confirms or denies */
+.fill-questions { flex:none; /* overflow:hidden zeroes min-height, and the fill view's flex column would crush the card to a hairline */
+  width:min(52rem,100%); border:1px solid color-mix(in srgb,var(--accent) 25%,var(--line)); border-radius:1.1rem;
+  background:rgba(44,44,46,.8); overflow:hidden; }
+.fill-questions-head { padding:1.1rem 1.3rem .9rem; border-bottom:1px solid var(--line); }
+.fill-questions-head h3 { margin:0; font-family:var(--font-serif),Georgia,serif; font-size:1.2rem; font-weight:600; letter-spacing:-.01em; }
+.fill-questions-head p { margin:.35rem 0 0; color:var(--muted); font-size:.82rem; line-height:1.5; }
+.fill-questions-notice { color:var(--accent) !important; font-weight:600; }
+.fill-question { padding:1rem 1.3rem 1.1rem; }
+.fill-question + .fill-question { border-top:1px solid var(--line); }
+.fill-question-text { margin:0; font-size:.95rem; font-weight:650; letter-spacing:-.005em; line-height:1.45; }
+.fill-question-evidence { margin:.45rem 0 0; color:var(--muted); font-size:.8rem; line-height:1.55; }
+.fill-question-action { margin:.45rem 0 0; color:var(--accent); font-size:.78rem; font-weight:600; line-height:1.5; }
+.fill-question-answer { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin-top:.75rem; }
+.fill-question-answer .fill-input { flex:1; min-width:12rem; }
+@media (max-width: 640px) { .fill-question-answer { flex-direction:column; align-items:stretch; } }
+
+/* the map pans and zooms like the other canvases */
+.world-map { touch-action:none; -webkit-user-select:none; user-select:none; cursor:-webkit-grab; cursor:grab; }
+.world-map[data-panning="true"] { cursor:-webkit-grabbing; cursor:grabbing; }
+.world-map-layer { position:absolute; inset:0; transform-origin:center; }
+.world-map-layer svg { position:absolute; inset:3%; width:94%; height:94%; }
+.world-map .map-zoom { position:absolute; right:.6rem; bottom:.6rem; z-index:6; }
+.world-map .map-marker { cursor:pointer; }
+
+/* the map fills its tab edge-to-edge, like every other canvas */
+.family-map-view { padding:0; overflow:hidden; }
+.world-map { position:absolute; inset:0; max-width:none; aspect-ratio:auto; margin:0; border:0; border-radius:0;
+  box-shadow:none; background:#10130f; overflow:hidden; }
+.world-map-board { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); aspect-ratio:2/1;
+  min-width:100%; min-height:100%; background:radial-gradient(circle at 60% 28%,rgba(40,46,42,.92),rgba(24,28,25,.92)); }
+.world-map-board svg { position:absolute; inset:0; width:100%; height:100%; }
+.family-map-view .unmapped-places { position:absolute; left:1rem; bottom:1rem; z-index:6; margin:0; max-width:min(70%, 46rem);
+  border:1px solid rgba(255,255,255,.08); border-radius:.8rem; background:rgba(28,28,30,.66); padding:.45rem .75rem;
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); }
+
+/* the Map panel: a city's people as preview cards */
+.place-panel .person-hero-copy { margin-bottom:.4rem; }
+.place-people { margin-top:1.2rem; border:1px solid var(--line); border-radius:.9rem; background:rgba(44,44,46,.72); overflow:hidden; }
+.place-person-row { display:flex; width:100%; align-items:center; gap:.75rem; padding:.7rem .9rem; text-align:left; }
+.place-person-row + .place-person-row { border-top:1px solid var(--line); }
+.place-person-row:hover { background:var(--wash); }
+.place-person-row .ped-portrait { height:2.5rem; width:2.5rem; flex:none; }
+.place-person-copy { display:flex; min-width:0; flex:1; flex-direction:column; gap:.1rem; }
+.place-person-copy strong { font-size:.92rem; font-weight:650; letter-spacing:-.005em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.place-person-copy span { color:var(--muted); font-size:.78rem; font-variant-numeric:tabular-nums; }
+.place-person-go { color:var(--muted); font-size:1rem; flex:none; }
+
+/* ============ the panels live over the chat, not beside it ============
+   Hovering or opening a person no longer pushes the canvas or the action
+   bar around: the profile, hover preview, and map place panel all take the
+   chat column's footprint (min 30rem so the content never cramps). The
+   canvas keeps its full width and nothing jumps. */
+.person-panel { position:absolute; left:0; top:0; bottom:0; height:auto; width:max(var(--chat-width,330px), 30rem);
+  flex:none; z-index:45; box-shadow:18px 0 50px rgba(0,0,0,.45); }
+main.has-person .site-action-bar, main.chat-collapsed.has-person .site-action-bar { left:max(var(--chat-width,330px), 30rem); }
+/* the preview must slide OVER an open profile (panel is z-45), under the bar */
+.person-hover-preview { left:0; width:max(var(--chat-width,330px), 30rem); z-index:46; }
+@media (max-width: 900px) {
+  .person-panel { position:fixed; width:min(100%,26rem); z-index:60; }
+  main.has-person .site-action-bar { left:var(--chat-width,480px); }
+  main.chat-collapsed.has-person .site-action-bar { left:0; }
+  .person-hover-preview { width:min(100%,26rem); }
+}
+.person-modal-v2 .person-facts > .person-fact-wide { grid-column:1/-1; border-left:0 !important; border-top:1px solid var(--line); }
+
+/* photographs: a person can hold many, and one photograph many people */
+.person-photos { margin-top:1.9rem; }
+.photo-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(6.5rem, 1fr)); gap:.5rem; }
+.photo-tile { position:relative; aspect-ratio:1; overflow:hidden; border-radius:.8rem; border:1px solid var(--line); background:var(--card); }
+.photo-tile img { width:100%; height:100%; object-fit:cover; display:block; }
+.photo-tile.is-portrait { border-color:color-mix(in srgb,var(--accent) 55%,transparent); box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent); }
+.photo-tile-badge { position:absolute; left:.35rem; bottom:.35rem; border-radius:999px; background:rgba(20,20,22,.78); color:var(--accent);
+  padding:.1rem .45rem; font-size:.6rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+.photo-tile-actions { position:absolute; inset:0; display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:.2rem;
+  padding:.4rem; background:rgba(12,12,14,.82); opacity:0; transition:opacity .18s var(--ease); }
+.photo-tile:hover .photo-tile-actions, .photo-tile:focus-within .photo-tile-actions { opacity:1; }
+.photo-tile-actions button { border-radius:.45rem; background:rgba(255,255,255,.1); color:var(--ink); padding:.25rem; font-size:.66rem; font-weight:600; }
+.photo-tile-actions button:hover { background:color-mix(in srgb,var(--accent) 32%,transparent); color:var(--accent); }
+.photo-tile-actions button.is-danger:hover { background:rgba(255,107,97,.2); color:var(--danger); }
+
+/* what the archive says before it is asked */
+.chat-fact { display:block; width:100%; margin-top:1rem; border:1px solid color-mix(in srgb,var(--accent) 26%,var(--line)); border-radius:1rem;
+  background:color-mix(in srgb,var(--accent) 8%,rgba(44,44,46,.7)); padding:.8rem .95rem; text-align:left; }
+.chat-fact:not(:disabled):hover { border-color:color-mix(in srgb,var(--accent) 55%,transparent); background:color-mix(in srgb,var(--accent) 13%,rgba(44,44,46,.7)); }
+.chat-fact:disabled { cursor:default; }
+.chat-fact-label { display:block; color:var(--accent); font-size:.62rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase; margin-bottom:.3rem; }
+.chat-fact > span:last-child { display:block; font-size:.86rem; line-height:1.5; letter-spacing:-.005em; }
+
+/* statistics */
+.archive-stats { overflow-y:auto; }
+.stat-cards { display:grid; grid-template-columns:repeat(auto-fit, minmax(13rem, 1fr)); gap:.7rem; margin-top:2.2rem; max-width:74rem; }
+.stat-card { border:1px solid var(--line); border-radius:1rem; background:rgba(44,44,46,.72); padding:1rem 1.1rem; }
+.stat-card strong { display:block; font-family:var(--font-serif),Georgia,serif; font-size:2rem; font-weight:600; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
+.stat-card span { display:block; margin-top:.25rem; color:var(--muted); font-size:.8rem; line-height:1.45; }
+.stat-sections { display:grid; grid-template-columns:repeat(auto-fit, minmax(20rem, 1fr)); gap:1.6rem 2.4rem; margin-top:2.4rem; max-width:74rem; }
+.stat-sections h3 { margin:0 0 .8rem; font-family:var(--font-serif),Georgia,serif; font-size:1.15rem; font-weight:600; }
+.stat-bars { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.45rem; }
+.stat-bars li { display:grid; grid-template-columns:minmax(6rem, 11rem) 1fr auto; align-items:center; gap:.6rem; font-size:.82rem; }
+.stat-bar-label { color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.stat-bar-track { height:.5rem; border-radius:999px; background:rgba(255,255,255,.07); overflow:hidden; }
+.stat-bar-fill { display:block; height:100%; border-radius:999px; background:color-mix(in srgb,var(--accent) 70%,transparent); }
+.stat-bar-count { color:var(--ink); font-variant-numeric:tabular-nums; font-size:.78rem; }
+.stat-note { margin:.7rem 0 0; color:var(--muted); font-size:.76rem; line-height:1.5; }
+.stat-decades { list-style:none; margin:0; padding:0; display:flex; align-items:flex-end; gap:.25rem; height:7rem; }
+.stat-decades li { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:.35rem; }
+.stat-decade-bar { width:100%; border-radius:.25rem .25rem 0 0; background:color-mix(in srgb,var(--accent) 55%,transparent); }
+.stat-decade-label { color:var(--muted); font-size:.6rem; font-variant-numeric:tabular-nums; }
+.stat-people { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.3rem; }
+.stat-people li { display:flex; align-items:baseline; justify-content:space-between; gap:1rem; border-bottom:1px solid var(--line); padding-bottom:.3rem; }
+.stat-people button { font-size:.86rem; font-weight:600; text-align:left; }
+.stat-people button:not(:disabled):hover { color:var(--accent); }
+.stat-people span { color:var(--muted); font-size:.78rem; font-variant-numeric:tabular-nums; }
+
+/* notes the family leaves on a record */
+.person-comments { margin-top:1.9rem; }
+.comment-list { display:flex; flex-direction:column; gap:.5rem; }
+.comment { border:1px solid var(--line); border-radius:.9rem; background:rgba(44,44,46,.72); padding:.7rem .9rem; }
+.comment-body { margin:0; font-size:.88rem; line-height:1.55; white-space:pre-wrap; }
+.comment-meta { display:flex; align-items:center; gap:.4rem; margin:.4rem 0 0; color:var(--muted); font-size:.74rem; }
+.comment-remove { margin-left:auto; color:var(--muted); font-size:.9rem; line-height:1; padding:0 .25rem; border-radius:.35rem; }
+.comment-remove:hover { color:var(--danger); background:rgba(255,107,97,.14); }
+.comment-compose { display:flex; flex-direction:column; align-items:flex-start; gap:.5rem; margin-top:.6rem; }
+.comment-compose textarea { min-height:3.4rem; resize:vertical; }
+
+/* the documents room and the change history */
+.settings-links { display:grid; grid-template-columns:repeat(auto-fit, minmax(14rem,1fr)); gap:.6rem; margin-top:.9rem; }
+.settings-link-card { display:block; border:1px solid var(--line); border-radius:.9rem; background:var(--card); padding:.85rem 1rem; text-decoration:none; color:var(--ink); }
+.settings-link-card:hover { border-color:var(--accent); }
+.settings-link-card strong { display:block; font-size:.92rem; }
+.settings-link-card span { display:block; margin-top:.2rem; color:var(--muted); font-size:.78rem; line-height:1.45; }
+.document-list { list-style:none; margin:1rem 0 0; padding:0; display:flex; flex-direction:column; gap:.4rem; }
+.document-list li { display:flex; align-items:baseline; gap:.7rem; border:1px solid var(--line); border-radius:.8rem; background:var(--card); padding:.55rem .8rem; }
+.document-kind { flex:none; border-radius:999px; background:var(--wash); color:var(--muted); padding:.15rem .55rem; font-size:.62rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.document-name { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:.88rem; color:var(--ink); text-decoration:none; }
+.document-name:hover { color:var(--accent); }
+.document-size { color:var(--muted); font-size:.76rem; font-variant-numeric:tabular-nums; }
+.document-heading { margin:1.6rem 0 .7rem !important; font-size:1.05rem !important; }
+.history-list { list-style:none; margin:1rem 0 0; padding:0; display:flex; flex-direction:column; gap:.5rem; }
+.history-list li { border:1px solid var(--line); border-radius:.9rem; background:var(--card); padding:.6rem .85rem; }
+.history-line { display:flex; align-items:baseline; justify-content:space-between; gap:.75rem; }
+.history-kind { color:var(--accent); font-size:.66rem; font-weight:700; letter-spacing:.1em; text-transform:uppercase; }
+.history-line time { color:var(--muted); font-size:.72rem; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.history-summary { margin:.3rem 0 0; font-size:.86rem; line-height:1.5; }
+.history-actor { margin:.2rem 0 0; color:var(--muted); font-size:.72rem; }
+
+/* the family year */
+.archive-calendar { overflow-y:auto; }
+.calendar-today { max-width:74rem; margin-top:1.8rem; border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line)); border-radius:1rem;
+  background:color-mix(in srgb,var(--accent) 8%,rgba(44,44,46,.7)); padding:.9rem 1.1rem; }
+.calendar-today .eyebrow { margin-bottom:.35rem; }
+.calendar-today-line { margin:.15rem 0; font-size:.9rem; line-height:1.5; }
+.calendar-months { columns:2 22rem; column-gap:2.4rem; max-width:74rem; margin-top:2rem; }
+.calendar-month { break-inside:avoid; margin-bottom:1.6rem; }
+.calendar-month h3 { margin:0 0 .5rem; font-family:var(--font-serif),Georgia,serif; font-size:1.1rem; font-weight:600; }
+.calendar-month ul { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.25rem; }
+.calendar-month li { display:grid; grid-template-columns:1.6rem .5rem 1fr auto; align-items:baseline; gap:.5rem; font-size:.84rem; }
+.calendar-month li.is-today { border-radius:.5rem; background:color-mix(in srgb,var(--accent) 14%,transparent); padding:.15rem .3rem; margin:0 -.3rem; }
+.calendar-day { color:var(--muted); font-variant-numeric:tabular-nums; text-align:right; }
+.calendar-dot { width:.45rem; height:.45rem; border-radius:999px; align-self:center; }
+.calendar-dot.is-birthday { background:var(--accent); }
+.calendar-dot.is-remembrance { background:#8e8e93; }
+.calendar-dot.is-story { background:#bf7b30; }
+.calendar-month button { text-align:left; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.calendar-month button:not(:disabled):hover { color:var(--accent); }
+.calendar-detail { color:var(--muted); font-size:.74rem; white-space:nowrap; }
+
+/* ============ three languages, two directions ============
+   Persian reads right to left, so the chrome mirrors: the chat column and
+   every panel that docks beside it swap sides, and the arrows that mean
+   "back" and "forward" swap with them. The canvases are not mirrored -
+   a family tree is a spatial diagram, and Persian genealogy software draws
+   it the same way. */
+html[lang="fa"] body { font-family: var(--font-persian), var(--font-sans), Tahoma, sans-serif; }
+html[lang="fa"] .font-serif, html[lang="fa"] h1, html[lang="fa"] h2, html[lang="fa"] h3,
+html[lang="fa"] .person-modal-v2 h2, html[lang="fa"] .archive-view-heading h2 { font-family: var(--font-persian), var(--font-serif), serif; }
+/* Persian numerals stay Latin here: the archive's dates are written that way */
+html[lang="fa"] { font-variant-numeric: normal; }
+
+[dir="rtl"] .family-shell { direction: rtl; }
+[dir="rtl"] .chat-sidebar { border-right: 0; border-left: 1px solid var(--line); }
+[dir="rtl"] .chat-resize-handle { right: auto; left: -3px; }
+[dir="rtl"] .chat-edge-reveal { left: auto; right: 0; border-left: 1px solid var(--line); border-right: 0;
+  border-radius: .8rem 0 0 .8rem; transform: translateY(-50%) translateX(0) scaleX(-1); }
+[dir="rtl"] .site-action-bar { left: 0; right: var(--chat-width,480px); }
+[dir="rtl"] main.chat-collapsed .site-action-bar { right: 0; }
+[dir="rtl"] main.has-person .site-action-bar, [dir="rtl"] main.chat-collapsed.has-person .site-action-bar {
+  left: 0; right: var(--chat-width,480px); }
+[dir="rtl"] .person-panel { left: auto; right: 0; border-right: 0; border-left: 1px solid var(--line);
+  box-shadow: -18px 0 50px rgba(0,0,0,.45); }
+[dir="rtl"] .person-hover-preview { left: auto; right: 0; }
+[dir="rtl"] .canvas-controls, [dir="rtl"] .ped-zoom, [dir="rtl"] .world-map .map-zoom { right: auto; left: .6rem; }
+[dir="rtl"] .canvas-legend { left: auto; right: 16px; }
+[dir="rtl"] .build-version { left: auto; right: .75rem; }
+[dir="rtl"] .family-map-view .unmapped-places { left: auto; right: 1rem; }
+/* the stage itself keeps its left-to-right reading, like the printed charts */
+[dir="rtl"] .focus-view, [dir="rtl"] .archive-view, [dir="rtl"] .ped-stage, [dir="rtl"] .family-canvas { direction: ltr; }
+[dir="rtl"] .archive-view-heading, [dir="rtl"] .stat-sections, [dir="rtl"] .calendar-months,
+[dir="rtl"] .stat-cards, [dir="rtl"] .fill-view, [dir="rtl"] .timeline-list { direction: rtl; }
+[dir="rtl"] .fill-th, [dir="rtl"] .fill-row-head, [dir="rtl"] .place-person-row,
+[dir="rtl"] .relationship-row-main, [dir="rtl"] .chat-suggestion { text-align: right; }
+[dir="rtl"] .fill-row-head::after { right: auto; left: .8rem; }
+[dir="rtl"] .place-person-go, [dir="rtl"] .story-card > summary::after { transform: scaleX(-1); }
+[dir="rtl"] .person-nav button, [dir="rtl"] .focus-back { transform: scaleX(-1); }
+[dir="rtl"] .settings-back-pill { flex-direction: row-reverse; }
+.settings-languages { display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.9rem; }
+.settings-language { border:1px solid var(--line); border-radius:999px; background:var(--card); padding:.5rem 1.1rem; color:var(--ink); font-size:.88rem; font-weight:600; }
+.settings-language:hover { border-color:var(--accent); color:var(--accent); }
+.settings-language.is-active { border-color:var(--accent); background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }
+
+/* language, in the top bar */
+.lang-switch { display:flex; align-items:center; gap:.3rem; }
+.lang-switch-label { color:var(--muted); font-size:.72rem; font-weight:600; letter-spacing:.02em; }
+.lang-pick { display:inline-flex; align-items:center; gap:.3rem; border:1px solid transparent; border-radius:999px;
+  padding:.28rem .5rem; color:var(--muted); font-size:.74rem; font-weight:600; line-height:1; }
+.lang-pick:hover { border-color:var(--line); color:var(--ink); background:var(--wash); }
+.lang-pick.is-active { border-color:color-mix(in srgb,var(--accent) 45%,transparent);
+  background:color-mix(in srgb,var(--accent) 16%,transparent); color:var(--accent); }
+.lang-pick > span:first-child { font-size:.95rem; line-height:1; }
+/* names collapse before the flags do, and the whole thing before the search */
+@media (max-width: 1700px) { .lang-pick-name { display:none; } }
+@media (max-width: 1280px) { .lang-switch-label { display:none; } }
+@media (max-width: 1080px) { .lang-switch { display:none; } }
+/* a crowded pair of cities: the quieter one keeps its disc, and its name
+   appears when you point at it */
+.map-marker.is-quiet > strong { opacity:0; transform:translateX(-.35rem); pointer-events:none;
+  transition:opacity .15s var(--ease), transform .15s var(--ease); }
+.map-marker.is-quiet:hover > strong, .map-marker.is-quiet:focus-visible > strong { opacity:1; transform:none; }
+/* a crowded neighbour puts its name on the other side rather than losing it */
+.map-marker.is-left > strong { left:auto; right:1.6rem; padding:.35rem .7rem .35rem .55rem; }
+.map-marker:hover { z-index:40 !important; }
+.fill-question-photo { display:block; margin:.7rem 0 .2rem; border:1px solid var(--line); border-radius:.9rem; overflow:hidden; max-width:26rem; }
+.fill-question-photo img { display:block; width:100%; height:auto; }
+.fill-question-photo:hover { border-color:var(--accent); }
+.fill-question-choices { display:flex; gap:.5rem; flex-wrap:wrap; }
+
+/* ============ one canvas-chrome language ============
+   The back/forward pair top-left and the zoom stack bottom-right are the same
+   kind of control, so they are built from the same parts: a frosted container
+   holding square glass buttons, hairline-divided, exactly like Maps. */
+.focus-nav { display:flex; gap:0; width:max-content; padding:.2rem; border-radius:.9rem;
+  background:rgba(28,28,30,.66); border:1px solid rgba(255,255,255,.08);
+  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); box-shadow:0 10px 30px rgba(0,0,0,.45); }
+.focus-back { display:flex; height:2.2rem; width:2.2rem; min-width:2.2rem; align-items:center; justify-content:center;
+  border:0; border-radius:.7rem; background:transparent; padding:0; color:var(--ink); font-size:1.05rem; line-height:1; }
+.focus-back:not(:disabled):hover { background:rgba(255,255,255,.1); color:var(--ink); border:0; }
+.focus-back:disabled { opacity:.32; }
+.focus-nav .focus-back:first-child { border-radius:.7rem 0 0 .7rem; }
+.focus-nav .focus-back:last-child { border-radius:0 .7rem .7rem 0; border-left:1px solid rgba(255,255,255,.08); }
+
+/* A death entered by mistake has to be reversible from the record itself.
+   Quiet by default - the correction belongs to editors who spot an error,
+   not to the reading of a life. */
+.fact-correction { display:inline-block; margin-top:.35rem; padding:.12rem .45rem; border-radius:.4rem;
+  border:1px solid transparent; background:transparent; color:var(--muted);
+  font-size:.72rem; letter-spacing:.01em; transition:color .15s, background .15s, border-color .15s; }
+.fact-correction:hover { color:var(--ink); background:rgba(255,255,255,.07); border-color:var(--line); }
+
+/* One fact per row, label beside value. Born and Died side by side gave each
+   a half-width cell for a sentence that needs a whole one: "1983-07-05 in
+   Paris, France" broke across two lines between the city and the country. */
+.person-modal-v2 .person-facts { grid-template-columns:1fr; }
+.person-modal-v2 .person-facts > div { display:grid; grid-template-columns:7rem 1fr;
+  align-items:baseline; gap:.2rem .8rem; padding:.62rem 1rem; }
+.person-modal-v2 .person-facts > div + div { border-left:0; border-top:1px solid var(--line); }
+.person-modal-v2 .person-facts p { margin-top:0; }
+.person-modal-v2 .person-facts .fact-correction { grid-column:2; justify-self:start; }
+/* a narrow panel has no room for two columns; the label goes back on top */
+@media (max-width: 560px) {
+  .person-modal-v2 .person-facts > div { grid-template-columns:1fr; gap:.15rem; }
+  .person-modal-v2 .person-facts .fact-correction { grid-column:1; }
+}
+
+/* The focal card is the anchor: the spouse and the siblings hang beneath it
+   without adding to the column's height, so the column centres on the card
+   and the children sit directly across from the person, not below them. */
+.ped-couple { position:relative; }
+.ped-focal-below { position:absolute; top:calc(100% + .45rem); left:0; right:0;
+  display:flex; flex-direction:column; gap:.45rem; }
+.ped-siblings { margin-top:.55rem; }
+
+/* How many relatives a card would bring that are not on the board. Without it
+   a sibling with seven children reads as a leaf. */
+.ped-more { flex:none; margin-left:auto; min-width:1.45rem; padding:0 .32rem;
+  border-radius:999px; border:1px solid var(--line); background:rgba(255,255,255,.06);
+  color:var(--muted); font-size:.66rem; font-weight:700; line-height:1.35rem; text-align:center;
+  font-variant-numeric:tabular-nums; cursor:inherit; }
+.ped-card button:hover .ped-more { border-color:color-mix(in srgb,var(--accent) 45%,transparent);
+  background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent); }
+[dir="rtl"] .ped-more { margin-left:0; margin-right:auto; }
+
+
+/* The column label sat in the flow, so centring the column put the cards
+   half a label below the focal card. The body holds the cards alone; the
+   label hangs above it. */
+.ped-col-body { position:relative; display:flex; flex-direction:column; gap:inherit; }
+.ped-col-body > .ped-col-label { position:absolute; bottom:calc(100% + .4rem); left:0; margin:0; }
+
+
+/* The portrait is the first photograph, not a separate thing in the header:
+   one wrapping row that starts with it and runs on to more lines. */
+.person-modal-v2 .person-photos { margin:1rem 0 0; }
+.person-modal-v2 .photo-grid { display:flex; flex-wrap:wrap; gap:.5rem; }
+.person-modal-v2 .photo-tile { flex:none; width:5.6rem; }
+.person-modal-v2 .photo-tile-add { display:flex; align-items:center; justify-content:center;
+  border-style:dashed; background:transparent; color:var(--muted); font-size:1.2rem; }
+.person-modal-v2 .photo-tile-add:hover { border-color:var(--accent); color:var(--accent); background:var(--wash); }
+
+/* Clearing a death is a small x beside it, not a sentence. */
+.fact-clear { justify-self:start; width:1.4rem; height:1.4rem; margin-top:.15rem; border-radius:.4rem;
+  border:1px solid transparent; background:transparent; color:var(--muted); font-size:.95rem; line-height:1; }
+.fact-clear:hover { border-color:var(--line); background:rgba(255,107,97,.14); color:var(--danger); }
+
+/* Facts the archive can state from its own numbers, each a way in: the fact
+   reads first, the question it opens sits under it in the accent. */
+.chat-factoids { display:flex; flex-direction:column; gap:.5rem; margin-top:1rem; }
+.chat-factoid { display:flex; flex-direction:column; gap:.3rem; width:100%; text-align:left;
+  border:1px solid var(--line); border-radius:.9rem; background:rgba(44,44,46,.7);
+  padding:.7rem .9rem; font-size:.84rem; line-height:1.45; color:var(--ink);
+  transition:border-color .18s, background .18s; }
+.chat-factoid:hover { border-color:color-mix(in srgb,var(--accent) 45%,transparent); background:var(--wash); }
+.chat-factoid-ask { color:var(--muted); font-size:.75rem; line-height:1.4; }
+.chat-factoid:hover .chat-factoid-ask { color:var(--accent); }
+[dir="rtl"] .chat-factoid { text-align:right; }
+
+/* The Died field shares its line with the button that clears it, so the input
+   still takes the width every other field has. */
+.fill-with-clear { display:flex; align-items:center; gap:.4rem; }
+.fill-with-clear .fill-input { flex:1; min-width:0; }
+
+/* One column on a phone. The chat sidebar had a hard 480px from a later pass
+   that clobbered the min(430px,100vw) rule above, so on a 390pt screen it
+   pushed the header bar - which starts where the sidebar ends - out to
+   1174px. A document that wide makes the browser zoom the whole archive down
+   to a third of its size, record panel included, and nothing on the page
+   looks wrong from the inside: it is the viewport that gave way. */
+@media (max-width: 743px) {
+  .chat-sidebar { width:min(var(--chat-width,480px),100vw); flex:0 0 min(var(--chat-width,480px),100vw); }
+  /* The bar spans the phone, so the shell has to start below it - otherwise
+     it lies over the top of whatever is in the first column, including the
+     chat's own collapse button, which is the only way through to the views. */
+  .family-shell { padding-top:3.6rem; }
+  /* and the views no longer need to reserve room for a bar that floats */
+  .focus-view, .fill-view { padding-top:1.5rem; }
+  .archive-view { padding-top:2rem; }
+  .site-action-bar,
+  main.has-person .site-action-bar,
+  main.chat-collapsed .site-action-bar,
+  main.chat-collapsed.has-person .site-action-bar { left:0; right:0; }
+  .site-action-bar { gap:.5rem; }
+}
+
+@media (max-width: 743px) {
+  /* .family-shell is isolation:isolate, so the record panel's z-index is
+     confined inside it. With the panel covering the whole phone, the shell
+     has to sit above the header and the version stamp or they paint over it -
+     which is why the panel's close button could not be tapped at all. */
+  main.has-person .family-shell { z-index:70; }
+  /* and the panel is the page here, not a layer over a visible canvas: at 94%
+     the tree showed through the biography */
+  .person-panel { background:var(--sidebar); }
+  .person-panel-bar { background:var(--sidebar); }
+}
+
+/* A phone has no hover, so the photograph's actions - set as portrait, who
+   else is in this, remove - were unreachable: they live behind :hover on the
+   tile. On a coarse pointer the tile becomes a column - picture, then its
+   actions underneath - rather than an overlay, so nothing depends on hover
+   and nothing overlaps. The image carries the frame the tile used to. */
+@media (hover: none) {
+  .person-modal-v2 .photo-tile { width:calc(50% - .25rem); aspect-ratio:auto; overflow:visible;
+    display:flex; flex-direction:column; border:0; border-radius:0; background:transparent; box-shadow:none; }
+  .person-modal-v2 .photo-tile img { width:100%; height:auto; aspect-ratio:1;
+    border:1px solid var(--line); border-radius:.8rem; }
+  .person-modal-v2 .photo-tile.is-portrait img { border-color:color-mix(in srgb,var(--accent) 55%,transparent);
+    box-shadow:0 0 0 1px color-mix(in srgb,var(--accent) 35%,transparent); }
+  .person-modal-v2 .photo-tile-badge { top:.4rem; bottom:auto; }
+  .person-modal-v2 .photo-tile-actions { position:static; inset:auto; opacity:1; flex-direction:row; flex-wrap:wrap;
+    gap:.25rem; padding:.35rem 0 0; background:transparent; }
+  .person-modal-v2 .photo-tile-actions button { flex:1 1 auto; min-height:2rem; font-size:.7rem; }
+  .person-modal-v2 .photo-tile-add { aspect-ratio:1; border:1px dashed var(--line); border-radius:.8rem; }
+  /* thumb-sized rather than cursor-sized */
+  .gender-pick { padding:.4rem .95rem; }
+  .person-modal-v2 .inline-edit { padding:.25rem .4rem; }
+  .relationship-remove { min-width:2rem; min-height:2rem; }
+  .fact-clear { width:2rem; height:2rem; }
+  .marriage-status { min-height:2rem; }
+  .photo-remove-button, .person-delete-button { min-height:2rem; padding:.3rem .6rem; }
+}
+
+/* The header's contents outgrew it at every width - 1437px of them on a
+   1400px desktop - which scrolled the whole page sideways. The tab strip is
+   what stretches, and it is the one part of the bar with nothing escaping it,
+   so it carries the scroll; the account menu opens out of the bar and must
+   not be clipped, which is why the bar itself does not. */
+.site-action-bar > * { min-width:0; }
+.archive-view-switcher { max-width:100%; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+.archive-view-switcher::-webkit-scrollbar { display:none; }
+.archive-view-switcher button { flex:none; }
+
+/* The bar's right-hand group and the canvas column were still pushing the
+   page past a phone: 451px of Sign in pill on a 390px screen. The tab strip
+   gives up its space first, the columns are allowed to shrink, and on a
+   phone the language switcher keeps its flags but drops its words while the
+   search - which the chat and the List view both cover - stands down. */
+.family-shell > * { min-width:0; }
+
+@media (max-width: 720px) {
+  .lang-switch-label, .lang-pick-name { display:none; }
+  .lang-switch { gap:.1rem; padding:.1rem; }
+  .tree-search { display:none; }
+}
+
+/* The password gate, and the admin card that sets what it asks for. */
+.gate-form { display:flex; gap:.5rem; margin-top:.9rem; }
+.gate-form input { flex:1; min-width:0; border:1px solid var(--line); border-radius:.7rem;
+  background:rgba(44,44,46,.75); color:var(--ink); padding:.6rem .8rem; font:inherit; }
+.gate-form input:focus { outline:2px solid color-mix(in srgb,var(--accent) 45%,transparent); }
+.gate-form button { border-radius:999px; background:var(--accent-fill); color:#fff;
+  padding:.6rem 1.2rem; font-size:.85rem; font-weight:650; }
+.gate-form button:disabled { opacity:.5; }
+.gate-error { margin:.6rem 0 0; color:var(--danger); font-size:.85rem; }
+.gate-note { margin:.9rem 0 0; color:var(--muted); font-size:.8rem; }
+.gate-note a { color:var(--accent); }
+
+.settings-access { display:flex; flex-direction:column; gap:.7rem; margin:.9rem 0 .2rem;
+  border:1px solid var(--line); border-radius:.9rem; padding:.9rem; background:rgba(44,44,46,.45); }
+.settings-access-row { display:flex; flex-direction:column; gap:.35rem; font-size:.82rem; color:var(--muted); }
+.settings-access-row input { border:1px solid var(--line); border-radius:.6rem; background:rgba(28,28,30,.8);
+  color:var(--ink); padding:.5rem .7rem; font:inherit; }
+.settings-access-actions { display:flex; gap:.5rem; flex-wrap:wrap; }
+.settings-access-actions button { border-radius:999px; background:var(--accent-fill); color:#fff;
+  padding:.45rem 1rem; font-size:.8rem; font-weight:650; }
+.settings-access-actions button:disabled { opacity:.45; }
+.settings-share { display:flex; flex-wrap:wrap; align-items:center; gap:.5rem; margin:0; }
+.settings-share code { flex:1; min-width:0; overflow-x:auto; white-space:nowrap; border:1px solid var(--line);
+  border-radius:.5rem; background:rgba(28,28,30,.8); padding:.35rem .55rem; font-size:.75rem; color:var(--ink); }
+
+/* A city's name over its head or under its feet, for the ones with no room
+   beside the pin. Centred on the pin and clear of it either way. */
+.map-marker.is-above > strong, .map-marker.is-below > strong {
+  left:50%; right:auto; transform:translateX(-50%); padding:.35rem .55rem; }
+.map-marker.is-above > strong { bottom:1.9rem; }
+.map-marker.is-below > strong { top:1.9rem; }
+
+/* "Which one of these is you?" - shown once, to a signed-in member who has
+   not yet said where they stand. Every suggestion carries the birth year and
+   the parents, because a name alone does not tell two Mohammads apart. */
+.identify-card { border:1px solid color-mix(in srgb,var(--accent) 30%,var(--line)); border-radius:.9rem;
+  background:rgba(44,44,46,.7); padding:.85rem .9rem; font-size:.85rem; line-height:1.5; }
+.identify-head { display:flex; align-items:center; justify-content:space-between; gap:.5rem; }
+.identify-head .eyebrow { color:var(--accent); margin:0; }
+.identify-skip { width:1.6rem; height:1.6rem; border-radius:.4rem; color:var(--muted); font-size:1rem; line-height:1; }
+.identify-skip:hover { background:rgba(255,255,255,.08); color:var(--ink); }
+.identify-card > p { margin:.35rem 0 .6rem; color:var(--muted); font-size:.8rem; }
+.identify-card .modal-input { width:100%; }
+.identify-matches { list-style:none; margin:.6rem 0 0; padding:0; display:flex; flex-direction:column; gap:.3rem; }
+.identify-matches button { display:flex; flex-direction:column; gap:.1rem; width:100%; text-align:left;
+  border:1px solid var(--line); border-radius:.6rem; background:var(--card); padding:.45rem .6rem; }
+.identify-matches button:hover:not(:disabled) { border-color:var(--accent); }
+.identify-matches strong { font-size:.84rem; font-weight:650; }
+.identify-matches span { color:var(--muted); font-size:.73rem; }
+.identify-none, .identify-error { margin:.6rem 0 0; font-size:.78rem; }
+.identify-none { color:var(--muted); }
+.identify-error { color:var(--danger); }
+
+/* Where the reader stands in a long list. Quiet - a marker, not a selection. */
+.outline-line.is-me > .outline-name, .timeline-list li.is-me button > span:first-child { color:var(--accent); font-weight:700; }
+.outline-line.is-me::before, .timeline-list li.is-me::before {
+  content:"you"; margin-right:.45rem; border-radius:999px; padding:.05rem .4rem;
+  background:color-mix(in srgb,var(--accent) 18%,transparent); color:var(--accent);
+  font-size:.62rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; }
+
+/* What the archive is doing with a document nobody is watching. */
+.ingest-note { margin:0 0 .6rem; border:1px solid color-mix(in srgb,var(--accent) 28%,var(--line));
+  border-radius:.7rem; background:color-mix(in srgb,var(--accent) 10%,transparent);
+  padding:.5rem .7rem; color:var(--ink); font-size:.78rem; line-height:1.45; }
+
+.person-sources { margin-top:1.5rem; padding-top:1.25rem; border-top:1px solid var(--line); }
+.source-review { border-radius:999px; background:color-mix(in srgb,#f59e0b 18%,transparent); color:#9a5d00;
+  padding:.18rem .5rem; font-size:.68rem; font-weight:700; }
+.source-empty { margin:.6rem 0 0; color:var(--muted); font-size:.78rem; line-height:1.5; }
+.source-list { display:flex; flex-direction:column; gap:.5rem; margin-top:.65rem; }
+.source-claim { border:1px solid var(--line); border-radius:.75rem; background:var(--card); padding:.65rem .75rem; }
+.source-claim.is-disputed { border-color:color-mix(in srgb,#f59e0b 55%,var(--line)); }
+.source-claim > div { display:flex; justify-content:space-between; gap:1rem; font-size:.78rem; }
+.source-claim > div strong { font-weight:700; }
+.source-claim > div span { text-align:right; overflow-wrap:anywhere; }
+.source-claim p { margin:.3rem 0 0; color:var(--muted); font-size:.68rem; line-height:1.4; }
+.source-claim blockquote { margin:.45rem 0 0; border-left:2px solid var(--line); padding-left:.55rem; color:var(--muted); font-size:.72rem; }
+.source-claim a { display:inline-block; margin-top:.45rem; color:var(--accent); font-size:.72rem; font-weight:650; }
+.source-actions { justify-content:flex-start !important; margin-top:.5rem; }
+.source-actions button { border:1px solid var(--line); border-radius:999px; background:transparent; padding:.25rem .55rem;
+  color:var(--ink); font-size:.68rem; font-weight:650; cursor:pointer; }
+.source-actions button:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.history-undo-wrap { display:flex; align-items:center; gap:.55rem; margin-top:.55rem; }
+.history-undo { border:1px solid var(--line); border-radius:999px; background:var(--card); color:var(--ink); padding:.3rem .7rem;
+  font-size:.72rem; font-weight:650; cursor:pointer; }
+.history-undo:hover:not(:disabled) { border-color:var(--accent); color:var(--accent); }
+.history-undo-wrap span, .history-undone { color:var(--muted); font-size:.7rem; }
+.merge-person-box { margin-top:1.2rem; border:1px solid var(--line); border-radius:.9rem; background:var(--card); padding:.85rem; }
+.merge-person-box .modal-input { width:100%; margin-top:.65rem; }
+
+/* --- Apple's compact and regular widths, applied ---------------------------
+   Below 768pt is compact: a phone, or an iPad in Slide Over. One column, the
+   chat and the views taking turns.
+   At 768pt and above is regular: an iPad, which should be given a real split
+   rather than a stretched phone. A 480pt chat took 62% of an iPad in portrait
+   and left the family board 288pt to live in. */
+@media (min-width: 744px) and (max-width: 1100px) {
+  .chat-sidebar { width:clamp(20rem, 38vw, 26rem); flex:0 0 clamp(20rem, 38vw, 26rem); }
+  .site-action-bar,
+  main.has-person .site-action-bar,
+  main.chat-collapsed.has-person .site-action-bar { left:clamp(20rem, 38vw, 26rem); }
+  main.chat-collapsed .site-action-bar { left:0; }
+  /* the record panel is a sheet over the board here, not a third column */
+  .person-panel { width:min(100%, 26rem); }
+}
+
+/* The bar's contents must never widen the page, at any size: the tab strip
+   gives up its room first and the controls beside it hold their own. */
+.site-action-bar .archive-view-switcher { flex:1 1 auto; min-width:0; }
+.site-action-bar > :last-child { flex:none; }
+
+/* --- Safe areas -----------------------------------------------------------
+   With viewport-fit=cover the page runs under the notch and the home
+   indicator, so everything pinned to an edge has to keep clear of them. */
+.site-action-bar { padding-top:env(safe-area-inset-top); height:calc(3.6rem + env(safe-area-inset-top)); }
+.family-shell { padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+.person-panel { padding-bottom:calc(var(--panel-pad, 2.5rem) + env(safe-area-inset-bottom)); }
+.person-panel-bar { padding-top:env(safe-area-inset-top); }
+.canvas-controls, .ped-zoom, .world-map .map-zoom { bottom:calc(.6rem + env(safe-area-inset-bottom)); }
+.build-version { bottom:calc(.6rem + env(safe-area-inset-bottom)); }
+@media (max-width: 743px) {
+  .family-shell { padding-top:calc(3.6rem + env(safe-area-inset-top)); }
+  .chat-sidebar > div { padding-bottom:calc(1.5rem + env(safe-area-inset-bottom)); }
+}
+
+/* --- Touch targets --------------------------------------------------------
+   Apple asks for 44pt on a coarse pointer. These were sized for a cursor. */
+@media (hover: none) {
+  .person-modal-v2 .photo-tile-actions button { min-height:2.75rem; }
+  .relationship-remove, .fact-clear { min-width:2.75rem; min-height:2.75rem; }
+  .marriage-status, .photo-remove-button, .person-delete-button { min-height:2.75rem; }
+  .gender-pick { min-height:2.75rem; padding:.5rem 1.1rem; }
+  .archive-view-switcher button { min-height:2.75rem; }
+  .person-panel-bar button, .focus-back, .canvas-controls button { min-width:2.75rem; min-height:2.75rem; }
+  .lang-pick { min-width:2.75rem; min-height:2.75rem; }
+  .identify-matches button, .fill-row-head { min-height:2.75rem; }
+  /* the identify card only renders for a signed-in member, which is why an
+     anonymous sweep never saw these */
+  .identify-skip { min-width:2.75rem; min-height:2.75rem; }
+  .modal-input, .fill-input, .fill-search, .gate-form input { min-height:2.75rem; }
+  /* The chips that fold a branch are the tree's main control on a touch
+     screen. They live inside the canvas transform, so a board opened at 0.66
+     to fit an iPad rendered a 44pt chip at 29 - the same counter-scale the
+     map markers use keeps a thumb's worth of chip at any zoom. */
+  .branch-chip { min-height:2.75rem; padding:.5rem .8rem;
+    transform:translate(-50%, 0) scale(calc(1 / var(--tree-scale, 1))); transform-origin:top center; }
+  .settings-gear, .sidebar-toggle, .account-menu-button { min-width:2.75rem; min-height:2.75rem; }
+  .chat-edge-reveal { width:2.75rem; }
+  .public-chat-composer > button, .chat-send { min-width:2.75rem; min-height:2.75rem; }
+  .settings-signin, .site-action-bar a[href] { min-height:2.75rem; display:inline-flex; align-items:center; }
+  .tree-search input { min-height:2.75rem; }
+}
+
+/* Every view must be reachable without discovering a hidden scroll: Apple's
+   line on a segmented control is that its segments are visible, and that a
+   control which cannot show them should be a different control. So the strip
+   takes the room it needs and never gives way - and below the width where it
+   fits whole, it is replaced by a picker rather than clipped. What gives way
+   before either of them is the language switcher's words, then the search,
+   which the chat and the List view both cover. */
+.site-action-bar .archive-view-switcher { flex:none; max-width:none; overflow:visible; }
+.archive-view-picker { display:none; }
+@media (max-width: 1249px) {
+  .site-action-bar .archive-view-switcher { display:none; }
+  .archive-view-picker { display:inline-flex; align-items:center; flex:none; }
+  .archive-view-picker select { appearance:none; border:1px solid var(--line); border-radius:.7rem;
+    background:rgba(44,44,46,.7); color:var(--ink); font:inherit; font-size:.82rem; font-weight:650;
+    min-height:2.75rem; padding:.4rem 2rem .4rem .9rem; }
+  .archive-view-picker { position:relative; }
+  .archive-view-picker::after { content:"⌄"; position:absolute; right:.75rem; top:45%;
+    transform:translateY(-50%); color:var(--muted); font-size:.8rem; pointer-events:none; }
+}
+@media (max-width: 1500px) {
+  .lang-switch-label, .lang-pick-name { display:none; }
+  .lang-switch { gap:.15rem; padding:.12rem; }
+}
+/* The search and the switcher's words go together: below the width where
+   both fit beside a whole tab strip, neither is shown. The chat finds people
+   and the List view is a list of them. */
+@media (max-width: 1500px) {
+  .site-action-bar .tree-search { display:none; }
+}
+
+/* The board used to fade in and rise ten pixels whenever the focus changed.
+   It has no arrival flourish now: a card the reader clicked must sit still,
+   and every attempt to keep the animation for other cases left the camera
+   measuring a board that was still moving. */
+/* Launch sandbox: a real interactive canvas backed only by invented in-memory records. */
+.demo-shell{display:grid;grid-template-columns:minmax(300px,390px) 1fr;height:100dvh;background:var(--canvas)}
+.demo-sidebar{position:relative;z-index:2;display:flex;min-height:0;flex-direction:column;gap:24px;padding:28px;background:var(--panel);border-right:1px solid var(--line);overflow-y:auto}
+.demo-sidebar h1{font-family:var(--font-serif);font-size:2.3rem;line-height:1.02;margin:.5rem 0 1rem}.demo-sidebar p{color:var(--muted);line-height:1.55}
+.demo-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto}.demo-actions button{border:1px solid var(--line);border-radius:999px;background:var(--card);padding:10px 15px;font-weight:650}.demo-actions button:first-child{background:var(--accent-fill);color:white}.demo-actions button:disabled{opacity:.45}
+.demo-canvas{position:relative;min-width:0;min-height:0;overflow:hidden}
+@media(max-width:760px){.demo-shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}.demo-sidebar{max-height:45dvh;border-right:0;border-bottom:1px solid var(--line);padding:20px}.demo-sidebar h1{font-size:1.8rem}.demo-canvas{min-height:55dvh}}

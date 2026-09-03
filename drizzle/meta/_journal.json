@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1787647503542,
+      "tag": "0000_bizarre_james_howlett",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1787647561304,
+      "tag": "0001_sparkling_ultimates",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1787649808285,
+      "tag": "0002_chilly_zodiak",
+      "breakpoints": true
+    }
+  ]
+}

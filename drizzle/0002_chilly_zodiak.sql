@@ -1,0 +1,1 @@
+ALTER TABLE `people` ADD `photo_attachment_id` text;
