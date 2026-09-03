@@ -1,4 +1,4 @@
-# Agentic family tree
+# Family Tree
 
 A self-hosted family archive where an AI archivist is the primary way the
 family records itself. Members talk to it, hand it documents, photographs,
@@ -7,7 +7,7 @@ every fact can carry a source, conflicting sources become durable disputed
 claims a person adjudicates, every mutation is audited and reversible, and
 likely-living people are redacted from public view.
 
-**Live demo:** <https://family-archive-demo.ramine-4e9.workers.dev> — the
+**Live demo:** <https://family-tree-demo.shokunin.workers.dev> — the
 invented Everfield family. Every person is synthetic, the archive is public,
 and no AI key is attached (the chat politely declines; tree, views, GEDCOM
 import, and both MCP surfaces are fully live). Every real deployment is the
