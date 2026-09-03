@@ -33,14 +33,33 @@ export function webMcpAvailable(): boolean {
 }
 
 /** Registers everywhere, returns the teardown. Tools must not outlive the
- * UI they drive, so call the teardown on unmount. */
+ * UI they drive, so call the teardown on unmount.
+ *
+ * Some agentic browsers inject their model context after page scripts run,
+ * so when no surface exists yet this polls briefly and registers the moment
+ * one appears - a page must never miss its agent by a race. */
 export function registerBrowserTools(tools: BrowserTool[]): () => void {
-  const contexts = surfaces();
-  for (const context of contexts) {
-    for (const tool of tools) context.registerTool(tool);
-  }
-  return () => {
+  const registered = new Set<ModelContext>();
+  const registerOn = (contexts: ModelContext[]) => {
     for (const context of contexts) {
+      if (registered.has(context)) continue;
+      registered.add(context);
+      for (const tool of tools) {
+        try { context.registerTool(tool); } catch { /* a malformed host surface must not break the page */ }
+      }
+    }
+  };
+  registerOn(surfaces());
+  let attempts = 0;
+  const poll = registered.size ? null : setInterval(() => {
+    attempts += 1;
+    const found = surfaces();
+    if (found.length) registerOn(found);
+    if (registered.size || attempts > 20) clearInterval(poll!);
+  }, 500);
+  return () => {
+    if (poll) clearInterval(poll);
+    for (const context of registered) {
       for (const tool of tools) {
         try { context.unregisterTool(tool.name); } catch { /* teardown races navigation */ }
       }

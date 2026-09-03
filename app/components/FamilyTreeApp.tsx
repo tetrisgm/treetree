@@ -260,7 +260,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
       if (!response.ok) throw new Error(data.error === "openai_not_configured" ? "The archivist AI is not configured on this deployment." : "The archivist could not answer right now.");
       return data.reply || "That detail is not recorded in the archive.";
     },
-  }, treeLoaded);
+  });
   // what the archive volunteers before it is asked: an anniversary today, or
   // a fact about the family, with openers worth tapping
   const [greeting, setGreeting] = useState<Greeting | null>(null);
