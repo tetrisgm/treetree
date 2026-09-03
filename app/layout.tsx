@@ -4,6 +4,7 @@ import { Cormorant_Garamond, Plus_Jakarta_Sans, Vazirmatn } from "next/font/goog
 import "./globals.css";
 import { isRtl, LANG_COOKIE, parseLang } from "../lib/i18n";
 import { archiveName, archiveTagline, publicOrigin } from "../lib/archive-config";
+import { inlineRegistrarScript } from "../lib/webmcp-descriptors";
 
 const sans = Plus_Jakarta_Sans({ variable: "--font-sans", subsets: ["latin"] });
 // Persian needs a face with real Arabic-script coverage; Vazirmatn is the
@@ -46,6 +47,9 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const lang = parseLang((await cookies()).get(LANG_COOKIE)?.value);
   return (
     <html lang={lang} dir={isRtl(lang) ? "rtl" : "ltr"}>
+      {/* demo instance: WebMCP tools exist the moment the document parses,
+          before hydration - an agent that enumerates early still finds them */}
+      {process.env.WEBMCP_DEMO === "1" && <head><script dangerouslySetInnerHTML={{ __html: inlineRegistrarScript() }} /></head>}
       <body className={`${sans.variable} ${serif.variable} ${persian.variable}`}><div className="grain-overlay" aria-hidden="true" />{children}</body>
     </html>
   );

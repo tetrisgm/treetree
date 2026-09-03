@@ -18,21 +18,31 @@ export function useWebMcp(tree: FamilyTree | null, actions: WebMcpActions) {
   // register at mount, not at tree-ready: an agent may enumerate the page's
   // tools immediately, and execute() already answers "still loading" politely
   useEffect(() => {
-    return registerBrowserTools(WEBMCP_TOOLS.map((tool) => ({
+    const run = async (name: string, args: Record<string, unknown>) => {
+      const tool = WEBMCP_TOOLS.find((candidate) => candidate.name === name);
+      const { tree: liveTree, actions: liveActions } = latest.current;
+      if (!tool) return { content: [{ type: "text" as const, text: `Unknown tool ${name}.` }], isError: true };
+      if (!liveTree) return { content: [{ type: "text" as const, text: "The family tree has not finished loading yet; try again in a moment." }], isError: true };
+      try {
+        return { content: [{ type: "text" as const, text: await tool.execute(args ?? {}, liveTree, liveActions) }] };
+      } catch (error) {
+        return { content: [{ type: "text" as const, text: error instanceof Error ? error.message : "The tool call failed." }], isError: true };
+      }
+    };
+    // the demo's pre-hydration registrar may already own the surface; then
+    // this app only supplies the dispatcher its stubs are waiting for
+    (window as unknown as { __ttDispatch?: typeof run }).__ttDispatch = run;
+    const inline = (window as unknown as { __ttInlineRegistered?: boolean }).__ttInlineRegistered;
+    const teardown = inline ? null : registerBrowserTools(WEBMCP_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
       inputSchema: tool.inputSchema,
-      execute: async (args) => {
-        const { tree: liveTree, actions: liveActions } = latest.current;
-        if (!liveTree) return { content: [{ type: "text" as const, text: "The family tree has not finished loading yet; try again in a moment." }], isError: true };
-        try {
-          const text = await tool.execute(args ?? {}, liveTree, liveActions);
-          return { content: [{ type: "text" as const, text }] };
-        } catch (error) {
-          return { content: [{ type: "text" as const, text: error instanceof Error ? error.message : "The tool call failed." }], isError: true };
-        }
-      },
+      execute: (args) => run(tool.name, args ?? {}),
     })));
+    return () => {
+      delete (window as unknown as { __ttDispatch?: typeof run }).__ttDispatch;
+      teardown?.();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 }
