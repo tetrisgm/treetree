@@ -9,14 +9,15 @@ import { registerBrowserTools } from "../../lib/webmcp-register";
  * mounted, and take them down on unmount so no tool outlives the UI it drives.
  * The live tree and actions are read through a ref, so a rebuilt tree does not
  * churn the registration - the tools always see the latest state. */
-export function useWebMcp(tree: FamilyTree | null, actions: WebMcpActions, ready: boolean) {
+export function useWebMcp(tree: FamilyTree | null, actions: WebMcpActions) {
   const latest = useRef({ tree, actions });
   // keep the ref current without writing it during render (a tool's execute,
   // fired by the browser agent, reads it long after this effect settles)
   useEffect(() => { latest.current = { tree, actions }; });
 
+  // register at mount, not at tree-ready: an agent may enumerate the page's
+  // tools immediately, and execute() already answers "still loading" politely
   useEffect(() => {
-    if (!ready) return;
     return registerBrowserTools(WEBMCP_TOOLS.map((tool) => ({
       name: tool.name,
       description: tool.description,
@@ -32,5 +33,6 @@ export function useWebMcp(tree: FamilyTree | null, actions: WebMcpActions, ready
         }
       },
     })));
-  }, [ready]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 }
