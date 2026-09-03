@@ -9,6 +9,7 @@ import { FamilyTreeCanvas } from "./FamilyTreeCanvas";
 import { Markdown } from "./Markdown";
 import { useLanguage } from "./LanguageContext";
 import { useWebMcp } from "./useWebMcp";
+import { webMcpAvailable } from "../../lib/webmcp-register";
 import { DemoIntro } from "./DemoIntro";
 import { LANGUAGES, LANGUAGE_FLAGS, LANGUAGE_NAMES } from "../../lib/i18n";
 import { BUILD_ID, VERSION } from "../../lib/build";
@@ -151,6 +152,27 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
   const closeIntro = () => { setIntro(null); try { window.localStorage.setItem("treetree-intro-seen", "1"); } catch { /* private mode */ } };
   const [menuOpen, setMenuOpen] = useState(false);
   const [chatCollapsed, setChatCollapsed] = useState(false);
+  /* In an agentic browser the visitor already has a chat - the agent's own -
+   * and this page's tools cover everything ours can do. Detecting a WebMCP
+   * host (present at load, or injected within the polling window) collapses
+   * the chat sidebar once so the view leads; the edge reveal brings it back,
+   * and we never fight a human who reopened it. */
+  useEffect(() => {
+    let collapsed = false;
+    const collapseForAgent = () => {
+      if (collapsed) return;
+      collapsed = true;
+      setChatCollapsed(true);
+    };
+    if (webMcpAvailable()) { collapseForAgent(); return; }
+    let attempts = 0;
+    const timer = setInterval(() => {
+      attempts += 1;
+      if (webMcpAvailable()) { collapseForAgent(); clearInterval(timer); }
+      if (attempts > 20) clearInterval(timer);
+    }, 500);
+    return () => clearInterval(timer);
+  }, []);
   const [hoverPreview, setHoverPreview] = useState<Person | null>(null);
   const [hoverPlace, setHoverPlace] = useState<MappedPlace | null>(null);
   // Map mode: a clicked city opens the panel as a list of its people; opening
