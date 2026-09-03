@@ -60,7 +60,7 @@ export default function DemoClient() {
       },
     });
 
-    return registerBrowserTools([
+    const tools: BrowserTool[] = [
       tool("list_family", "Everyone currently in the sandbox family, with birth years.", {}, [], () =>
         live.current.tree.people.map((person) => `${person.displayName} (${person.birthDate ?? "?"})`).join("; ") || "The sandbox is empty."),
       tool("add_person", "Add an invented person to the sandbox family the human is watching. The canvas updates immediately.",
@@ -95,7 +95,20 @@ export default function DemoClient() {
         () => { if (!undoLast()) throw new Error("Nothing to undo."); return "Undone."; }),
       tool("reset_sandbox", "Clear the sandbox back to the founding couple.", {}, [],
         () => { reset(); return "Sandbox reset to Maya and Leo Rowan."; }),
-    ]);
+    ];
+    const run = async (name: string, args: Record<string, unknown>) => {
+      const match = tools.find((candidate) => candidate.name === name);
+      return match ? match.execute(args ?? {}) : { content: [{ type: "text" as const, text: `Unknown tool ${name}.` }], isError: true };
+    };
+    // the pre-hydration registrar's stubs wait for this dispatcher; when it
+    // already owns the surface, registering again would duplicate the tools
+    (window as unknown as { __ttDispatch?: typeof run }).__ttDispatch = run;
+    const inline = (window as unknown as { __ttInlineRegistered?: boolean }).__ttInlineRegistered;
+    const teardown = inline ? null : registerBrowserTools(tools);
+    return () => {
+      delete (window as unknown as { __ttDispatch?: typeof run }).__ttDispatch;
+      teardown?.();
+    };
   }, []);
 
   return <main className="demo-shell">
