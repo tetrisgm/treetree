@@ -14,6 +14,20 @@ import, and both MCP surfaces are fully live). Every real deployment is the
 opposite: one Worker, one family, private by default, theirs alone. Each
 instance also serves its own `/demo` sandbox with invented people.
 
+## Try it as a WebMCP tester (60 seconds)
+
+Open the [live demo](https://family-tree-demo.shokunin.workers.dev) in a
+WebMCP-enabled browser (Chrome 149+, or an agentic in-app browser) and talk
+to your agent: *"Where does this family come from?"*, *"How is June Marlowe
+related to Nina Everfield?"*, *"Show Rosalind on the canvas"*, *"Switch to
+the map."* Then open [/demo](https://family-tree-demo.shokunin.workers.dev/demo)
+and let it create: *"Add Iris Rowan born 1980, make Maya Rowan her mother,
+marry her to a new person Owen Pike"* — the canvas grows as it works, the
+sidebar narrates, and *"undo that"* takes it back. The full guide lives at
+[/start](https://family-tree-demo.shokunin.workers.dev/start). The demo's
+chat is a live AI archivist grounded in the graph (rate-limited; every
+person is invented).
+
 ## WebMCP: the page is a tool surface
 
 Family Tree registers its tools on **both** `document.modelContext` and

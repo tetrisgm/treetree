@@ -1405,3 +1405,10 @@ html[lang="fa"] { font-variant-numeric: normal; }
 .demo-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:auto}.demo-actions button{border:1px solid var(--line);border-radius:999px;background:var(--card);padding:10px 15px;font-weight:650}.demo-actions button:first-child{background:var(--accent-fill);color:white}.demo-actions button:disabled{opacity:.45}
 .demo-canvas{position:relative;min-width:0;min-height:0;overflow:hidden}
 @media(max-width:760px){.demo-shell{grid-template-columns:1fr;grid-template-rows:auto 1fr}.demo-sidebar{max-height:45dvh;border-right:0;border-bottom:1px solid var(--line);padding:20px}.demo-sidebar h1{font-size:1.8rem}.demo-canvas{min-height:55dvh}}
+
+/* the demo instance's pointer for WebMCP testers; env-gated, absent on real archives */
+.webmcp-demo-pill { position:fixed; top:.65rem; left:50%; transform:translateX(-50%); z-index:60;
+  background:var(--accent-fill,#43684f); color:#fff; font-size:.78rem; font-weight:600;
+  padding:.4rem .95rem; border-radius:999px; box-shadow:0 6px 24px rgba(0,0,0,.35); white-space:nowrap; }
+.webmcp-demo-pill:hover { filter:brightness(1.1); }
+@media (max-width: 743px) { .webmcp-demo-pill { display:none; } }

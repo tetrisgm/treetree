@@ -55,6 +55,7 @@ export default async function Home() {
         viewer={{ signedIn: Boolean(user), canEdit: TEMPORARY_OPEN_EDITOR || role === "admin" || role === "canEdit", role, displayName: user?.displayName ?? null, personId: user && role ? await getMemberPerson(user.email) : null }}
         signOutPath={appleSignOutPath("/")}
         signInEnabled={!TEMPORARY_OPEN_EDITOR}
+        webMcpDemo={process.env.WEBMCP_DEMO === "1"}
       />
     </LanguageProvider>
   );
