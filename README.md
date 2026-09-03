@@ -23,7 +23,7 @@ related to Nina Everfield?"*, *"Show Rosalind on the canvas"*, *"Switch to
 the map."* Then open [/demo](https://treetree.app/demo)
 and let it create: *"Add Iris Rowan born 1980, make Maya Rowan her mother,
 marry her to a new person Owen Pike"* — the canvas grows as it works, the
-sidebar narrates, and *"undo that"* takes it back. The on-page pill opens the same guide. The demo's
+sidebar narrates, and *"undo that"* takes it back. The chat's suggested prompts ARE the WebMCP script — click one to watch the behaviour (the chat honours the canvas and view commands itself), then say the same sentence to your agent. The demo's
 chat is a live AI archivist grounded in the graph (rate-limited; every
 person is invented).
 

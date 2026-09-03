@@ -412,7 +412,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
               <IdentifyMe tree={tree} onClaimed={(person) => { setIdentity(person.id); openPerson(person); }} />
             )}
             {!viewer.canEdit ? (
-              <PublicArchiveChat signedIn={viewer.signedIn} tree={tree} greeting={greeting} focusPerson={selectedPerson} onClearFocus={closePerson} onOpenPerson={(person) => openPerson(person)} onPeopleMentioned={(people) => { setHighlightedIds(people.map((person) => person.id)); setViewMode("tree"); }} />
+              <PublicArchiveChat signedIn={viewer.signedIn} tree={tree} greeting={greeting} focusPerson={selectedPerson} onClearFocus={closePerson} onOpenPerson={(person) => openPerson(person)} onPeopleMentioned={(people) => { setHighlightedIds(people.map((person) => person.id)); setViewMode("tree"); }} webMcpDemo={webMcpDemo} onSwitchView={(view) => setViewMode(view as ViewMode)} />
             ) : (
               <>
                 <div className="flex-1 space-y-4 overflow-y-auto pr-1">
@@ -623,7 +623,15 @@ function EmptyTree({ canEdit }: { canEdit: boolean }) {
   );
 }
 
-function PublicArchiveChat({ signedIn, tree, greeting, focusPerson, onClearFocus, onPeopleMentioned, onOpenPerson }: { signedIn: boolean; tree: FamilyTree; greeting: Greeting | null; focusPerson: Person | null; onClearFocus: () => void; onPeopleMentioned: (people: Person[]) => void; onOpenPerson: (person: Person) => void }) {
+const WEBMCP_SHOWCASE = [
+  { text: "The same sentences work for your WebMCP browser agent — this chat honours them too.", ask: "Where does this family come from?" },
+  { text: "Kinship, computed from the graph in family words.", ask: "How is June Marlowe related to Nina Everfield?" },
+  { text: "A life told in order, not a field dump.", ask: "What was Edmund Everfield's life like?" },
+  { text: "The agent can drive the page. So can this chat.", ask: "Show Rosalind Everfield on the canvas" },
+  { text: "Views are tools too.", ask: "Switch to the map" },
+];
+
+function PublicArchiveChat({ signedIn, tree, greeting, focusPerson, onClearFocus, onPeopleMentioned, onOpenPerson, webMcpDemo, onSwitchView }: { signedIn: boolean; tree: FamilyTree; greeting: Greeting | null; focusPerson: Person | null; onClearFocus: () => void; onPeopleMentioned: (people: Person[]) => void; onOpenPerson: (person: Person) => void; webMcpDemo?: boolean; onSwitchView?: (view: string) => void }) {
   const { t } = useLanguage();
   const [question, setQuestion] = useState("");
   const [reply, setReply] = useState("");
@@ -635,13 +643,35 @@ function PublicArchiveChat({ signedIn, tree, greeting, focusPerson, onClearFocus
     setAsked((current) => [...current, text]);
     setQuestion("");
     setBusy(true); setReply("");
+    // the demo's UI-driving sentences are honoured right here, the same way
+    // a WebMCP agent would execute them - no model round-trip needed
+    if (webMcpDemo) {
+      const show = /^show\s+(.+?)(?:\s+on the canvas)?\s*[.!]?$/i.exec(text);
+      const view = /^switch to (?:the )?(tree|family|list|timeline|calendar|map|stats|numbers)(?:\s+view)?\s*[.!]?$/i.exec(text);
+      if (view && onSwitchView) {
+        onSwitchView(view[1].toLowerCase() === "numbers" ? "stats" : view[1].toLowerCase());
+        setReply(`Done — the ${view[1].toLowerCase()} view is on screen. A WebMCP browser agent does this with the page's own switch_view tool.`);
+        setBusy(false);
+        return;
+      }
+      if (show) {
+        const needle = show[1].trim().toLowerCase();
+        const match = tree.people.filter((person) => person.displayName.toLowerCase() === needle || person.displayName.toLowerCase().startsWith(needle));
+        if (match.length === 1) {
+          onOpenPerson(match[0]);
+          setReply(`There — ${match[0].displayName} is centred on the canvas with their record open. A WebMCP browser agent does this with show_person_on_canvas.`);
+          setBusy(false);
+          return;
+        }
+      }
+    }
     const contextual = focusPerson ? `[We are currently viewing the record of ${focusPerson.displayName}. Unless another person is named, answer about this person.]\n${text}` : text;
     try { const response = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: contextual }) }); const data = await response.json() as { reply?: string; error?: string }; const answer = response.ok ? data.reply || "No answer recorded." : "The archivist could not answer right now."; setReply(answer); onPeopleMentioned(tree.people.filter((person) => answer.toLocaleLowerCase().includes(person.displayName.toLocaleLowerCase()))); } finally { setBusy(false); }
   }
   return (
     <div className="public-chat flex h-full min-h-0 w-full flex-col">
       <div className={`flex flex-1 flex-col items-center overflow-y-auto pb-5 text-center ${asked.length || focusPerson ? "justify-start" : "justify-center"}`}>
-        {!asked.length && !focusPerson ? <><h3 className="mt-0 font-serif text-2xl">{t("chat.title")}</h3><p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t("chat.intro")}</p>{greeting?.fact && <button type="button" className="chat-fact" onClick={() => { const person = greeting.personId ? tree.people.find((candidate) => candidate.id === greeting.personId) : null; if (person) onOpenPerson(person); }} disabled={!greeting.personId}><span className="chat-fact-label">{t("chat.fromArchive")}</span><span>{greeting.fact}</span></button>}{greeting?.factoids?.length ? <div className="chat-factoids">{greeting.factoids.map((factoid) => <button type="button" className="chat-factoid" key={factoid.text} onClick={() => setQuestion(factoid.ask)}>
+        {!asked.length && !focusPerson ? <><h3 className="mt-0 font-serif text-2xl">{t("chat.title")}</h3><p className="mt-2 text-sm leading-6 text-[var(--muted)]">{t("chat.intro")}</p>{greeting?.fact && <button type="button" className="chat-fact" onClick={() => { const person = greeting.personId ? tree.people.find((candidate) => candidate.id === greeting.personId) : null; if (person) onOpenPerson(person); }} disabled={!greeting.personId}><span className="chat-fact-label">{t("chat.fromArchive")}</span><span>{greeting.fact}</span></button>}{(webMcpDemo ? WEBMCP_SHOWCASE : greeting?.factoids)?.length ? <div className="chat-factoids">{(webMcpDemo ? WEBMCP_SHOWCASE : greeting!.factoids).map((factoid) => <button type="button" className="chat-factoid" key={factoid.text} onClick={() => setQuestion(factoid.ask)}>
           <span>{factoid.text}</span>
           <span className="chat-factoid-ask">{factoid.ask}</span>
         </button>)}</div> : null}{signedIn && <p className="public-chat-note mt-5 text-xs leading-5 text-[var(--muted)]">You&apos;re signed in, but this Apple account isn&apos;t authorized to edit this family tree.</p>}</> : <div className="public-chat-thread w-full pt-4 text-left">{asked.map((message, index) => <div className="public-chat-user-bubble" key={`${message}-${index}`}>{message}</div>)}{busy && <p className="public-chat-syncing"><span className="agent-pulse" /> {t("chat.thinking")}</p>}{!busy && reply && <div className="public-chat-answer"><Markdown text={reply} /></div>}</div>}
