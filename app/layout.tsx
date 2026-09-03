@@ -47,10 +47,14 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   const lang = parseLang((await cookies()).get(LANG_COOKIE)?.value);
   return (
     <html lang={lang} dir={isRtl(lang) ? "rtl" : "ltr"}>
-      {/* demo instance: WebMCP tools exist the moment the document parses,
-          before hydration - an agent that enumerates early still finds them */}
-      {process.env.WEBMCP_DEMO === "1" && <head><script dangerouslySetInnerHTML={{ __html: inlineRegistrarScript() }} /></head>}
-      <body className={`${sans.variable} ${serif.variable} ${persian.variable}`}><div className="grain-overlay" aria-hidden="true" />{children}</body>
+      <body className={`${sans.variable} ${serif.variable} ${persian.variable}`}>
+        {/* demo instance: WebMCP tools exist the moment this script parses,
+            before hydration - an agent that enumerates early still finds
+            them. Never a literal <head>: the app router owns that element,
+            and rendering one broke hydration on every page. */}
+        {process.env.WEBMCP_DEMO === "1" && <script dangerouslySetInnerHTML={{ __html: inlineRegistrarScript() }} />}
+        <div className="grain-overlay" aria-hidden="true" />{children}
+      </body>
     </html>
   );
 }
