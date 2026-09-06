@@ -52,6 +52,7 @@ export async function POST(request: Request) {
     const result = await claimMemberPerson(canonical, personId, user.email);
     if (result === "taken") return Response.json({ error: "already_claimed" }, { status: 409 });
     if (result === "unknown_person") return Response.json({ error: "unknown_person" }, { status: 400 });
+    if (result === "not_a_member") return Response.json({ error: "not_a_member" }, { status: 404 });
     return Response.json({ members: await listMembers() });
   }
   if (body?.action === "remove") {

@@ -409,7 +409,13 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
    * opens far enough out to see more than one of them. */
   const topOfTree = useCallback((width = cursorRef.current?.parentElement?.getBoundingClientRect().width ?? 0): CanvasView =>
     ({ x: width / 2, y: 30, scale: clampScale(Math.min(1, width / 640)) }), []);
-  const goToTop = useCallback(() => { cancelCameraAnimation(); cancelWheelCommit(); commitView(topOfTree()); }, [cancelCameraAnimation, cancelWheelCommit, commitView, topOfTree]);
+  const goToTop = useCallback(() => {
+    // a hidden or mid-transition pane measures zero, and zero commits scale
+    // 0.5 pinned to the left edge instead of the view the control promises
+    const width = cursorRef.current?.parentElement?.getBoundingClientRect().width ?? 0;
+    if (!width) return;
+    cancelCameraAnimation(); cancelWheelCommit(); commitView(topOfTree(width));
+  }, [cancelCameraAnimation, cancelWheelCommit, commitView, topOfTree]);
   const centerOn = useCallback((person: Person, animate = true) => {
     const rect = cursorRef.current?.parentElement?.getBoundingClientRect();
     if (!rect) return;

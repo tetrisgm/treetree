@@ -498,7 +498,7 @@ export function OutlineView({ tree, onSelect, onPreview, meId }: { tree: FamilyT
       {kinship.get(person.id) && <span className="outline-kin">{kinship.get(person.id)}</span>}
       {spouses.map((spouse) => <span className="outline-spouse" key={spouse.id}>⚭ <button type="button" onClick={() => onSelect(spouse)}
         onMouseEnter={() => onPreview?.(spouse)} onMouseLeave={() => onPreview?.(null)}
-        onFocus={() => onPreview?.(spouse)} onBlur={() => onPreview?.(null)}>{spouse.displayName}</button>{personYears(spouse) ? ` ${personYears(spouse)}` : ""}</span>)}
+        onFocus={() => onPreview?.(spouse)} onBlur={() => onPreview?.(null)}>{spouse.displayName}</button>{personYears(spouse, estimates.get(spouse.id)?.year) ? ` ${personYears(spouse, estimates.get(spouse.id)?.year)}` : ""}</span>)}
     </span>;
     if (!kids.length) return <div className="outline-leaf" key={person.id}>{line}</div>;
     return <details key={person.id} open>

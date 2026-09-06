@@ -361,7 +361,7 @@ export async function listMembers(): Promise<Member[]> {
   if (d1ReadCircuitOpen()) {
     const snapshot = await memberAccessSnapshot();
     if (!snapshot) throw new Error("member_access_snapshot_unavailable");
-    return snapshot.members.map((member) => ({ email: member.email, role: member.role, addedBy: "snapshot", createdAt: "", links: snapshot.links.filter((link) => link.memberEmail === member.email && link.email !== member.email).map(({ email, provider }) => ({ email, provider })) }));
+    return snapshot.members.map((member) => ({ email: member.email, role: member.role, addedBy: "snapshot", createdAt: "", personId: member.personId ?? null, links: snapshot.links.filter((link) => link.memberEmail === member.email && link.email !== member.email).map(({ email, provider }) => ({ email, provider })) }));
   }
   try {
     await ensureSchema();
@@ -381,7 +381,7 @@ export async function listMembers(): Promise<Member[]> {
     console.warn("d1_quota_fallback_member_list");
     const snapshot = await memberAccessSnapshot();
     if (!snapshot) throw error;
-    return snapshot.members.map((member) => ({ email: member.email, role: member.role, addedBy: "snapshot", createdAt: "", links: snapshot.links.filter((link) => link.memberEmail === member.email && link.email !== member.email).map(({ email, provider }) => ({ email, provider })) }));
+    return snapshot.members.map((member) => ({ email: member.email, role: member.role, addedBy: "snapshot", createdAt: "", personId: member.personId ?? null, links: snapshot.links.filter((link) => link.memberEmail === member.email && link.email !== member.email).map(({ email, provider }) => ({ email, provider })) }));
   }
 }
 

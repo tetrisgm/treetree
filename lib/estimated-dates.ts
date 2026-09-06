@@ -26,7 +26,7 @@ const recordedYear = (date: string | null | undefined) => {
 };
 
 /** every person's birth year: the recorded one, or an estimate */
-export function estimateBirthYears(tree: FamilyTree): Map<string, EstimatedYear> {
+export function estimateBirthYears(tree: FamilyTree, today = new Date()): Map<string, EstimatedYear> {
   const known = new Map<string, number>();
   for (const person of tree.people) {
     const year = recordedYear(person.birthDate);
@@ -77,6 +77,13 @@ export function estimateBirthYears(tree: FamilyTree): Map<string, EstimatedYear>
       votes.sort((a, b) => a.spread - b.spread);
       const best = votes[0];
       const year = Math.round(votes.length > 1 ? (best.year * 2 + votes.slice(1).reduce((sum, vote) => sum + vote.year, 0)) / (votes.length + 1) : best.year);
+      /* Contradictory records exist - a man recorded dead in 1900 with a child
+         recorded born in 1990 - and an estimate that lands after its own
+         subject's death, or after today, is worse than no estimate at all: it
+         puts a birth below a death on the timeline and states a nonsense as a
+         fact to the archivist. Say nothing rather than something impossible. */
+      const ceiling = Math.min(recordedYear(person.deathDate) ?? Infinity, today.getUTCFullYear());
+      if (year > ceiling) continue;
       estimates.set(person.id, { year, spread: best.spread, reason: best.reason });
       changed = true;
     }

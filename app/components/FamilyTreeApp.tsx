@@ -87,7 +87,11 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
   // a visitor without an account may still have said who they are, in this browser
   const [localSeatSkipped, setLocalSeatSkipped] = useState(false);
   useEffect(() => {
-    if (viewer.personId) return;
+    /* Only for visitors who cannot claim a seat for real. Adopting a local
+       seat for a signed-in member would hide the claim prompt for good while
+       the server still knows no ego, so their digest questions and "how am I
+       related" would stay unanswered behind a page that looks answered. */
+    if (viewer.personId || (viewer.signedIn && viewer.role)) return;
     // after hydration, not during it: the server rendered no seat
     const timer = setTimeout(() => {
       let saved: string | null = null;
@@ -450,7 +454,9 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
             {viewer.signedIn && viewer.role && !identity && treeLoaded && tree.people.length > 0 && (
               <IdentifyMe tree={tree} onClaimed={(person) => { setIdentity(person.id); openPerson(person); }} />
             )}
-            {!(viewer.signedIn && viewer.role) && !identity && !localSeatSkipped && treeLoaded && tree.people.length > 0 && (
+            {/* not on the demo: its people are invented, so asking a
+                visitor which of them they are is nonsense */}
+            {!webMcpDemo && !(viewer.signedIn && viewer.role) && !identity && !localSeatSkipped && treeLoaded && tree.people.length > 0 && (
               <IdentifyMe tree={tree} local onClaimed={(person) => { setIdentity(person.id); try { window.localStorage.setItem("archive-seat", person.id); } catch { /* private mode */ } openPerson(person); }} onSkip={() => { setLocalSeatSkipped(true); try { window.localStorage.setItem("archive-seat", "skip"); } catch { /* private mode */ } }} />
             )}
             {!viewer.canEdit ? (

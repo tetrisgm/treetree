@@ -6,10 +6,13 @@ import { useLanguage } from "./LanguageContext";
 
 export function personYears(person: Person | undefined, estimatedBirth?: number | null) {
   if (!person) return "";
-  const born = person.birthDate?.slice(0, 4) ?? (estimatedBirth ? `c. ${estimatedBirth}` : undefined);
+  const recorded = person.birthDate?.slice(0, 4);
+  // an estimated year already says "c. 1930"; "b." belongs to a recorded one,
+  // or the row reads "b. c. 1930"
+  const born = recorded ?? (estimatedBirth ? `c. ${estimatedBirth}` : undefined);
   const died = person.deathDate?.slice(0, 4);
   if (born && died) return `${born}–${died}`;
-  if (born) return `b. ${born}`;
+  if (born) return recorded ? `b. ${born}` : born;
   if (died) return `d. ${died}`;
   return "";
 }
