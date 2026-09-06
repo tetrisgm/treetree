@@ -1427,3 +1427,8 @@ html[lang="fa"] { font-variant-numeric: normal; }
   color:var(--ink); padding:.5rem 1rem; font-size:.85rem; font-weight:600; cursor:pointer; text-decoration:none; }
 .demo-intro-actions .demo-intro-primary { background:var(--accent-fill,#43684f); border-color:transparent; color:#fff; }
 .demo-intro-actions button:hover, .demo-intro-actions a:hover { border-color:var(--accent); }
+
+/* kinship from the viewer's own seat: the word a line on the canvas cannot say */
+.tree-card-kin, .outline-kin { color:var(--accent, #7fb08f); font-size:.7rem; font-style:italic; letter-spacing:.01em; }
+.outline-kin { margin-left:.45em; }
+.person-kinship { margin:.35rem 0 0; color:var(--accent, #7fb08f); font-size:.92rem; font-style:italic; }

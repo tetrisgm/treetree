@@ -1,5 +1,16 @@
 "use client";
 
+import { placeLabel } from "../../lib/places";
+import { describeRelationship, relationshipSentence, shortKinship } from "../../lib/relationship-path";
+
+/** "Your paternal uncle — you share Haj Chorok." for the person on screen */
+function kinshipSentence(tree: FamilyTree, meId: string, otherId: string): string | null {
+  const result = describeRelationship(tree, meId, otherId);
+  const short = shortKinship(result);
+  if (!result || !short) return null;
+  const shared = relationshipSentence(result).split(" They share ")[1];
+  return `${short[0].toUpperCase()}${short.slice(1)}${shared ? ` — you share ${shared}` : "."}`;
+}
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { EvidenceClaim, FamilyTree, Person } from "../../lib/types";
 import { relatedPeople } from "../../lib/relationships";
@@ -17,10 +28,12 @@ type Props = {
   onClose: () => void;
   onSelect: (person: Person) => void;
   onTreeChange: (tree: FamilyTree) => void;
+  /** the viewer's own person in the tree, when they have said who they are */
+  meId?: string | null;
 };
 
 function locationLine(city: string | null, country: string | null, fallback: string | null) {
-  return city || country ? [city, country].filter(Boolean).join(", ") : fallback;
+  return placeLabel(city, country, fallback) || null;
 }
 
 /** autoOpen mounts straight into the input, so a caller can offer a field
@@ -142,7 +155,7 @@ function PersonSources({ personId }: { personId: string }) {
   </div>;
 }
 
-export default function PersonProfilePanel({ person, tree, canEdit, canComment, onClose, onSelect, onTreeChange, preview }: Props) {
+export default function PersonProfilePanel({ person, tree, canEdit, canComment, onClose, onSelect, onTreeChange, preview, meId }: Props) {
   const { t } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
@@ -213,6 +226,7 @@ export default function PersonProfilePanel({ person, tree, canEdit, canComment, 
   const status = lifeStatus(person, generations);
   const deathRecorded = status === "died";
   const presumedLiving = status === "living";
+  const kinship = useMemo(() => meId && meId !== person.id ? kinshipSentence(tree, meId, person.id) : null, [tree, meId, person.id]);
   const subtitleRest = [person.birthDate ? (person.deathDate ? `${person.birthDate.slice(0, 4)}–${person.deathDate.slice(0, 4)}` : `b. ${person.birthDate.slice(0, 4)}`) : person.deathDate ? `d. ${person.deathDate.slice(0, 4)}` : "", locationLine(person.birthCity, person.birthCountry, person.birthPlace) ?? ""].filter(Boolean).join(" · ");
   const relation = (other: Person, label: string) => tree.relationships.find((link) => (label === "Spouse" && link.type === "spouse" && ((link.fromPersonId === person.id && link.toPersonId === other.id) || (link.toPersonId === person.id && link.fromPersonId === other.id))) || (label === "Parents" && link.type === "parent" && link.fromPersonId === other.id && link.toPersonId === person.id) || (label === "Children" && link.type === "parent" && link.fromPersonId === person.id && link.toPersonId === other.id));
   return <section className="person-modal person-modal-v2 person-panel" role="dialog" aria-labelledby="person-modal-title">
@@ -231,6 +245,7 @@ export default function PersonProfilePanel({ person, tree, canEdit, canComment, 
           {person.gender === "female" && (person.maidenName || canEdit) && <span className="person-maiden">{person.maidenName ? `${t("person.nee")} ` : ""}<InlineText value={person.maidenName} placeholder="add maiden name" canEdit={canEdit} onSave={patchField("maidenName")} />{subtitleRest ? " · " : ""}</span>}
           {subtitleRest}
         </p>
+        {kinship && <p className="person-kinship">{kinship}</p>}
         <div className="person-gender-row">{(["female", "male"] as const).map((option) => <button key={option} type="button" className={`gender-pick ${person.gender === option ? "is-active" : ""}`} disabled={!canEdit} onClick={() => canEdit && patchField("gender")(person.gender === option ? "" : option)}>{option === "female" ? t("person.female") : t("person.male")}</button>)}</div>
       </div>
     </div>

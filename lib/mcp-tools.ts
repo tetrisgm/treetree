@@ -8,6 +8,7 @@
  * claims/adjudication queue (docs/PLATFORM.md phase 5), never as raw CRUD.
  */
 
+import { placeLabel } from "./places";
 import type { FamilyTree, Person } from "./types";
 import { describeRelationship, relationshipSentence } from "./relationship-path";
 import { archiveName } from "./archive-config";
@@ -102,8 +103,8 @@ export const MCP_TOOLS: McpTool[] = [
       const facts: string[] = [`# ${person.displayName}${lifespan(person)}`];
       if (person.gender) facts.push(`Gender: ${person.gender}`);
       if (person.maidenName) facts.push(`Maiden name: ${person.maidenName}`);
-      if (person.birthDate || person.birthCity || person.birthCountry || person.birthPlace) facts.push(`Born: ${[person.birthDate, person.birthCity ?? person.birthPlace, person.birthCountry].filter(Boolean).join(", ")}`);
-      if (person.deathDate || person.deathCity || person.deathCountry || person.deathPlace) facts.push(`Died: ${[person.deathDate, person.deathCity ?? person.deathPlace, person.deathCountry].filter(Boolean).join(", ")}`);
+      if (person.birthDate || person.birthCity || person.birthCountry || person.birthPlace) facts.push(`Born: ${[person.birthDate, placeLabel(person.birthCity, person.birthCountry, person.birthPlace)].filter(Boolean).join(", ")}`);
+      if (person.deathDate || person.deathCity || person.deathCountry || person.deathPlace) facts.push(`Died: ${[person.deathDate, placeLabel(person.deathCity, person.deathCountry, person.deathPlace)].filter(Boolean).join(", ")}`);
       if (person.residence) facts.push(`Residence: ${person.residence}`);
       if (person.biography) facts.push(`Biography: ${person.biography}`);
       if (parents.length) facts.push(`Parents: ${parents.map(brief).join("; ")}`);

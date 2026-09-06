@@ -1,5 +1,6 @@
 "use client";
 
+import { kinshipMap } from "../../lib/relationship-path";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FamilyTree, OpenQuestion, Person } from "../../lib/types";
 import { buildGenerations, buildRelationMaps, hiddenRelativeCount } from "../../lib/tree-layout";
@@ -456,6 +457,7 @@ function buildDescentModel(tree: FamilyTree) {
 
 /** The whole family as a collapsible indented outline. */
 export function OutlineView({ tree, onSelect, onPreview, meId }: { tree: FamilyTree; onSelect: (person: Person) => void; onPreview?: (person: Person | null) => void; meId?: string | null }) {
+  const kinship = useMemo(() => kinshipMap(tree, meId), [tree, meId]);
   // four hundred names is a long way to scroll to find yourself
   const scrolledTo = useRef<string | null>(null);
   const scrollHere = (element: HTMLElement | null) => {
@@ -488,6 +490,7 @@ export function OutlineView({ tree, onSelect, onPreview, meId }: { tree: FamilyT
         onMouseEnter={() => onPreview?.(person)} onMouseLeave={() => onPreview?.(null)}
         onFocus={() => onPreview?.(person)} onBlur={() => onPreview?.(null)}>{person.displayName}</button>
       {personYears(person) && <span className="outline-years">{personYears(person)}</span>}
+      {kinship.get(person.id) && <span className="outline-kin">{kinship.get(person.id)}</span>}
       {spouses.map((spouse) => <span className="outline-spouse" key={spouse.id}>⚭ <button type="button" onClick={() => onSelect(spouse)}
         onMouseEnter={() => onPreview?.(spouse)} onMouseLeave={() => onPreview?.(null)}
         onFocus={() => onPreview?.(spouse)} onBlur={() => onPreview?.(null)}>{spouse.displayName}</button>{personYears(spouse) ? ` ${personYears(spouse)}` : ""}</span>)}

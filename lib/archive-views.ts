@@ -1,4 +1,5 @@
 import type { FamilyTree, Person } from "./types";
+import { canonicalCity, canonicalCountry, placeKey, placeLabel } from "./places";
 
 export type TimelineEvent = {
   id: string;
@@ -45,9 +46,10 @@ const countryLatLon: Record<string, [number, number]> = {
   australia: [-25.3, 133.8], india: [22.6, 79.0], japan: [36.2, 138.3], china: [35.0, 103.0],
 };
 
-const normalized = (value: string) => value.toLocaleLowerCase().normalize("NFKD").replace(/\p{Diacritic}/gu, "").trim();
 const yearOf = (date: string | null) => date && /^\d{4}/.test(date) ? Number(date.slice(0, 4)) : null;
-const place = (city: string | null, country: string | null, fallback: string | null) => [city, country].filter(Boolean).join(", ") || fallback || "";
+// display and grouping both go through the shared spelling table, so
+// "Ghazvin" and "Qazvin" are one label before they are one pin
+const place = placeLabel;
 
 export function buildTimeline(tree: FamilyTree): TimelineEvent[] {
   const events: TimelineEvent[] = [];
@@ -68,15 +70,23 @@ export function mapFamilyPlaces(tree: FamilyTree): { mapped: MappedPlace[]; unma
   const groups = new Map<string, MappedPlace>();
   const unmapped = new Set<string>();
   for (const person of tree.people) {
+    // older records kept the whole place in one free-text field; read the
+    // town off its first segment and the country off its last so those get
+    // pins too instead of sitting in the unmapped list forever
+    const split = (city: string | null, country: string | null, fallback: string | null) => {
+      if (city || country || !fallback) return { city, country, fallback };
+      const parts = fallback.split(",").map((part) => part.trim()).filter(Boolean);
+      return { city: parts[0] ?? null, country: parts.length > 1 ? parts[parts.length - 1] : null, fallback };
+    };
     const locations = [
-      { city: person.birthCity, country: person.birthCountry, fallback: person.birthPlace },
-      { city: person.deathCity, country: person.deathCountry, fallback: person.deathPlace },
+      split(person.birthCity, person.birthCountry, person.birthPlace),
+      split(person.deathCity, person.deathCountry, person.deathPlace),
     ];
     for (const location of locations) {
       const label = place(location.city, location.country, location.fallback);
       if (!label) continue;
-      const coordinates = location.city ? cityLatLon[normalized(location.city)] : undefined;
-      const fallbackCoordinates = location.country ? countryLatLon[normalized(location.country)] : undefined;
+      const coordinates = location.city ? cityLatLon[placeKey(canonicalCity(location.city)!)] : undefined;
+      const fallbackCoordinates = location.country ? countryLatLon[placeKey(canonicalCountry(location.country)!)] : undefined;
       const latLon = coordinates || fallbackCoordinates;
       const point = latLon ? toPercent(latLon) : undefined;
       if (!point) { unmapped.add(label); continue; }

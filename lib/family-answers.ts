@@ -10,6 +10,7 @@
  * derived from the records and never guessed.
  */
 
+import { placeLabel } from "./places";
 import type { FamilyTree, Person } from "./types";
 import { describeRelationship, relationshipSentence } from "./relationship-path";
 import { buildGenerations } from "./tree-layout";
@@ -64,16 +65,16 @@ export function lifeStory(tree: FamilyTree, personId: string): string {
   const born = year(person.birthDate);
   const died = year(person.deathDate);
   const lines: string[] = [];
-  const birthPlace = person.birthCity ?? person.birthPlace;
-  lines.push(`${person.displayName}${born ? ` was born in ${born}` : ""}${birthPlace ? `${born ? "" : " was born"} in ${[birthPlace, person.birthCountry].filter(Boolean).join(", ")}` : ""}${parents.length ? `, ${born || birthPlace ? "to" : "the child of"} ${parents.map((p) => p.displayName).join(" and ")}` : ""}.`.replace(" .", "."));
+  const birthPlace = placeLabel(person.birthCity, person.birthCountry, person.birthPlace);
+  lines.push(`${person.displayName}${born ? ` was born in ${born}` : ""}${birthPlace ? `${born ? "" : " was born"} in ${birthPlace}` : ""}${parents.length ? `, ${born || birthPlace ? "to" : "the child of"} ${parents.map((p) => p.displayName).join(" and ")}` : ""}.`.replace(" .", "."));
   if (spouses.length) lines.push(`${person.gender === "female" ? "She" : person.gender === "male" ? "He" : "They"} married ${spouses.map((s) => s.displayName).join(", and later ")}.`);
   if (children.length) lines.push(`${children.length === 1 ? "One child is recorded" : `${children.length} children are recorded`}: ${children.map(briefName).join("; ")}.`);
   if (person.residence) lines.push(`Last recorded living in ${person.residence}.`);
   if (person.biography) lines.push(person.biography);
   if (stories.length) lines.push(`The archive keeps ${stories.length === 1 ? "a story" : `${stories.length} stories`} involving ${person.displayName}: ${stories.map((story) => `“${story.title}”`).join(", ")}.`);
   if (died) {
-    const deathPlace = person.deathCity ?? person.deathPlace;
-    lines.push(`${person.displayName} died in ${died}${deathPlace ? ` in ${[deathPlace, person.deathCountry].filter(Boolean).join(", ")}` : ""}${born ? `, aged about ${died - born}` : ""}.`);
+    const deathPlace = placeLabel(person.deathCity, person.deathCountry, person.deathPlace);
+    lines.push(`${person.displayName} died in ${died}${deathPlace ? ` in ${deathPlace}` : ""}${born ? `, aged about ${died - born}` : ""}.`);
   }
   return lines.join("\n");
 }
@@ -84,7 +85,7 @@ export function familyOrigins(tree: FamilyTree): string {
   const { depth } = buildGenerations(tree);
   const byGeneration = new Map<number, Map<string, number>>();
   for (const person of tree.people) {
-    const place = [person.birthCity ?? person.birthPlace, person.birthCountry].filter(Boolean).join(", ");
+    const place = placeLabel(person.birthCity, person.birthCountry, person.birthPlace);
     if (!place) continue;
     const generation = depth.get(person.id) ?? 0;
     const places = byGeneration.get(generation) ?? new Map<string, number>();
