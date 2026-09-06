@@ -6,7 +6,8 @@ import { useEffect, useState } from "react";
 
 type Role = "admin" | "canEdit" | "canView" | null;
 type Identity = { email: string; provider: string | null };
-type Member = { email: string; role: "admin" | "canEdit" | "canView"; addedBy: string; createdAt: string; links: Identity[] };
+type Member = { email: string; role: "admin" | "canEdit" | "canView"; addedBy: string; createdAt: string; links: Identity[]; personId?: string | null };
+type SeatOption = { id: string; displayName: string; birthDate: string | null };
 type AgentConnection = { id: string; clientName: string; scope: string; createdAt: string; lastUsedAt: string | null; expiresAt: string };
 type Props = {
   viewer: { signedIn: boolean; email: string | null; accountEmail: string | null; displayName: string | null; role: Role; links: Identity[]; connectedProviders: string[] };
@@ -20,7 +21,7 @@ type Props = {
 
 const PROVIDER_LABEL: Record<string, string> = { apple: "Apple", google: "Google" };
 
-const ERROR_COPY: Record<string, string> = {
+const ERROR_COPY: Record<string, string> = { already_claimed: "Another member is already seated as that person.", unknown_person: "That person is not in the tree.",
   invalid_response: "The sign-in response was incomplete. Please try again.",
   google_token_exchange_failed: "Google returned an authentication error. Please try again.",
   apple_token_exchange_failed: "Apple returned an authentication error. Please try again.",
@@ -65,6 +66,19 @@ export default function SettingsClient({ viewer, siteVisibility, agentConnection
     finally { setBusy(false); }
   };
   const [members, setMembers] = useState<Member[] | null>(null);
+  // the people list, for seating members in the tree; loaded once the
+  // member list exists, since only an admin sees either
+  const [people, setPeople] = useState<SeatOption[] | null>(null);
+  const [seating, setSeating] = useState<string | null>(null);
+  const [seatQuery, setSeatQuery] = useState("");
+  useEffect(() => {
+    if (!members || people) return;
+    let cancelled = false;
+    fetch("/api/tree").then((response) => response.json() as Promise<{ people?: SeatOption[] }>).then((data) => {
+      if (!cancelled && data.people) setPeople(data.people.map(({ id, displayName, birthDate }) => ({ id, displayName, birthDate })));
+    }).catch(() => {});
+    return () => { cancelled = true; };
+  }, [members, people]);
   const [newEmail, setNewEmail] = useState("");
   const [newRole, setNewRole] = useState<"canView" | "canEdit" | "admin">("canView");
   const [busy, setBusy] = useState(false);
@@ -84,7 +98,7 @@ export default function SettingsClient({ viewer, siteVisibility, agentConnection
     return () => { cancelled = true; };
   }, [viewer.role]);
 
-  const mutate = async (payload: Record<string, string>) => {
+  const mutate = async (payload: Record<string, string | null>) => {
     setBusy(true);
     setNotice("");
     try {
@@ -256,7 +270,7 @@ export default function SettingsClient({ viewer, siteVisibility, agentConnection
             <button type="button" className="fill-skip" disabled={busy} onClick={() => accessAction({ action: "new_link" })}>Make a new one</button>
           </p>}
         </div>}
-        <p className="settings-hint">canView can browse the archive, canEdit can change the family records, admin manages everything. New members start at canView.</p>
+        <p className="settings-hint">canView can browse the archive, canEdit can change the family records, admin manages everything. New members start at canView. Seating a member - saying which person in the tree they are - lets the archive answer &ldquo;how am I related&rdquo; and open on them.</p>
         {notice && <p className="settings-error">{notice}</p>}
         {!members && <p className="settings-hint">Loading the member list…</p>}
         {members && <ul className="settings-members">
@@ -268,6 +282,18 @@ export default function SettingsClient({ viewer, siteVisibility, agentConnection
                   <button type="button" className="settings-unlink" disabled={busy} aria-label={`Unlink ${link.email}`} title="Unlink this sign-in" onClick={() => mutate({ action: "unlink", email: link.email })}>×</button>
                 </span>)}
               </span>}
+            </span>
+            <span className="settings-member-seat">
+              {seating === member.email
+                ? <span className="settings-seat-picker">
+                    <input className="modal-input" autoFocus value={seatQuery} placeholder="Their name in the tree" aria-label={`Who ${member.email} is in the tree`} onChange={(event) => setSeatQuery(event.target.value)} />
+                    {seatQuery.trim().length >= 2 && <span className="relative-suggestions">{(people ?? []).filter((person) => person.displayName.toLocaleLowerCase().includes(seatQuery.trim().toLocaleLowerCase())).slice(0, 6).map((person) => <button type="button" key={person.id} disabled={busy} onClick={async () => { await mutate({ action: "seat", email: member.email, personId: person.id }); setSeating(null); setSeatQuery(""); }}><strong>{person.displayName}</strong><span>{person.birthDate?.slice(0, 4) || "year unknown"}</span></button>)}</span>}
+                    <button type="button" className="settings-seat-cancel" onClick={() => { setSeating(null); setSeatQuery(""); }}>Cancel</button>
+                  </span>
+                : <button type="button" className="settings-seat" disabled={busy} title="Which person in the tree this member is" onClick={() => { setSeating(member.email); setSeatQuery(""); }}>
+                    {member.personId ? (people?.find((person) => person.id === member.personId)?.displayName ?? "seated") : "Not seated"}
+                  </button>}
+              {member.personId && seating !== member.email && <button type="button" className="settings-unlink" disabled={busy} aria-label={`Unseat ${member.email}`} title="Forget who this member is in the tree" onClick={() => mutate({ action: "seat", email: member.email, personId: null })}>×</button>}
             </span>
             <select value={member.role} disabled={busy} aria-label={`Role for ${member.email}`}
               onChange={(event) => mutate({ action: "set", email: member.email, role: event.target.value })}>

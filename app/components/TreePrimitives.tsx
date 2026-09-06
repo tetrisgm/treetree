@@ -4,9 +4,9 @@ import { useMemo, useRef, useState } from "react";
 import type { FamilyTree, Person } from "../../lib/types";
 import { useLanguage } from "./LanguageContext";
 
-export function personYears(person: Person | undefined) {
+export function personYears(person: Person | undefined, estimatedBirth?: number | null) {
   if (!person) return "";
-  const born = person.birthDate?.slice(0, 4);
+  const born = person.birthDate?.slice(0, 4) ?? (estimatedBirth ? `c. ${estimatedBirth}` : undefined);
   const died = person.deathDate?.slice(0, 4);
   if (born && died) return `${born}–${died}`;
   if (born) return `b. ${born}`;

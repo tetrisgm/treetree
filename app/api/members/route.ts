@@ -1,6 +1,6 @@
 import { getAppleUser } from "../../apple-auth";
 import { getViewerRole, requireAdmin } from "../../authz";
-import { linkIdentity, listMembers, removeMember, resolveMemberEmail, unlinkIdentity, upsertMember } from "../../../db/store";
+import { claimMemberPerson, linkIdentity, listMembers, removeMember, resolveMemberEmail, unlinkIdentity, upsertMember } from "../../../db/store";
 import { preventSharedCaching, privateJsonResponse } from "../../../lib/archive-cache";
 
 export async function GET() {
@@ -12,7 +12,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const user = await getAppleUser();
   if (!user) return Response.json({ error: "sign_in_required" }, { status: 401 });
-  const body = await request.json().catch(() => null) as { action?: string; email?: string; role?: string; memberEmail?: string } | null;
+  const body = await request.json().catch(() => null) as { action?: string; email?: string; role?: string; memberEmail?: string; personId?: string | null } | null;
   const email = (body?.email || "").trim().toLowerCase();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return Response.json({ error: "invalid_email" }, { status: 400 });
   const isAdmin = (await getViewerRole(user)) === "admin";
@@ -44,6 +44,16 @@ export async function POST(request: Request) {
   const target = members.find((member) => member.email === canonical);
   const lastAdmin = target?.role === "admin" && members.filter((member) => member.role === "admin").length === 1;
 
+  if (body?.action === "seat") {
+    // an admin says which person in the tree a member is - the whole family
+    // seated in a minute, instead of each account noticing the prompt
+    if (!target) return Response.json({ error: "not_a_member" }, { status: 404 });
+    const personId = typeof body.personId === "string" && body.personId ? body.personId : null;
+    const result = await claimMemberPerson(canonical, personId, user.email);
+    if (result === "taken") return Response.json({ error: "already_claimed" }, { status: 409 });
+    if (result === "unknown_person") return Response.json({ error: "unknown_person" }, { status: 400 });
+    return Response.json({ members: await listMembers() });
+  }
   if (body?.action === "remove") {
     if (!target) return Response.json({ error: "not_a_member" }, { status: 404 });
     if (lastAdmin) return Response.json({ error: "last_admin" }, { status: 400 });

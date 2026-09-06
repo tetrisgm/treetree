@@ -82,6 +82,20 @@ export function placeLabel(city: string | null | undefined, country: string | nu
   return [canonicalCity(parts[0]), ...parts.slice(1, -1), ...(parts.length > 1 ? [canonicalCountry(parts[parts.length - 1])] : [])].filter(Boolean).join(", ");
 }
 
+/** Every canonical place already in the archive, plus the towns the alias
+ * table knows - the list a form offers while someone types, so a new record
+ * joins the spellings already there instead of inventing a fifth one. */
+export function knownPlaces(people: { birthCity?: string | null; birthCountry?: string | null; deathCity?: string | null; deathCountry?: string | null; residence?: string | null }[]): { cities: string[]; countries: string[] } {
+  const cities = new Set<string>(), countries = new Set<string>();
+  for (const person of people) {
+    for (const city of [person.birthCity, person.deathCity, person.residence]) { const canonical = canonicalCity(city); if (canonical) cities.add(canonical); }
+    for (const country of [person.birthCountry, person.deathCountry]) { const canonical = canonicalCountry(country); if (canonical) countries.add(canonical); }
+  }
+  for (const canonical of Object.values(CITY_ALIASES)) cities.add(canonical);
+  for (const canonical of Object.values(COUNTRY_ALIASES)) countries.add(canonical);
+  return { cities: [...cities].sort(), countries: [...countries].sort() };
+}
+
 /** Do two spellings name the same city? */
 export const sameCity = (a: string | null | undefined, b: string | null | undefined) =>
   Boolean(a && b) && placeKey(canonicalCity(a)!) === placeKey(canonicalCity(b)!);

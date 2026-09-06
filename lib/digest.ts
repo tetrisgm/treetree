@@ -1,3 +1,4 @@
+import { questionsForMember } from "./who-can-answer";
 import type { FamilyTree } from "./types";
 import type { ChangeEntry } from "../db/store";
 import { onThisDay } from "./family-facts";
@@ -12,6 +13,13 @@ export type Digest = {
   sections: { title: string; lines: string[] }[];
   empty: boolean;
 };
+
+/** The archive knows what it is missing and who is near enough to know; a
+ * digest that asks three such questions is worth more than one that only
+ * reports. `seatId` is the person the recipient says they are. */
+export function digestQuestions(tree: FamilyTree, seatId: string | null, today = new Date()): string[] {
+  return questionsForMember(tree, seatId, 3, today).map((entry) => entry.question);
+}
 
 const KIND_TITLES: Record<string, string> = {
   add_person: "People added",

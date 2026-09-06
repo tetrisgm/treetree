@@ -1,15 +1,19 @@
 "use client";
 
 import { placeLabel } from "../../lib/places";
-import { describeRelationship, relationshipSentence, shortKinship } from "../../lib/relationship-path";
+import { describeRelationship, relationshipSentence } from "../../lib/relationship-path";
+import { kinshipLabel } from "../../lib/kinship-words";
+import { estimateBirthYears } from "../../lib/estimated-dates";
+import type { Lang } from "../../lib/i18n";
 
 /** "Your paternal uncle — you share Haj Chorok." for the person on screen */
-function kinshipSentence(tree: FamilyTree, meId: string, otherId: string): string | null {
+function kinshipSentence(tree: FamilyTree, meId: string, otherId: string, lang: Lang): string | null {
   const result = describeRelationship(tree, meId, otherId);
-  const short = shortKinship(result);
+  const short = kinshipLabel(result, lang);
   if (!result || !short) return null;
   const shared = relationshipSentence(result).split(" They share ")[1];
-  return `${short[0].toUpperCase()}${short.slice(1)}${shared ? ` — you share ${shared}` : "."}`;
+  const via = shared ? (lang === "fa" ? ` — نیای مشترک: ${shared}` : lang === "fr" ? ` — vous descendez tous deux de ${shared}` : ` — you share ${shared}`) : ".";
+  return `${short[0].toUpperCase()}${short.slice(1)}${via}`;
 }
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { EvidenceClaim, FamilyTree, Person } from "../../lib/types";
@@ -156,7 +160,7 @@ function PersonSources({ personId }: { personId: string }) {
 }
 
 export default function PersonProfilePanel({ person, tree, canEdit, canComment, onClose, onSelect, onTreeChange, preview, meId }: Props) {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [relationEditor, setRelationEditor] = useState<string | null>(null);
@@ -226,7 +230,8 @@ export default function PersonProfilePanel({ person, tree, canEdit, canComment, 
   const status = lifeStatus(person, generations);
   const deathRecorded = status === "died";
   const presumedLiving = status === "living";
-  const kinship = useMemo(() => meId && meId !== person.id ? kinshipSentence(tree, meId, person.id) : null, [tree, meId, person.id]);
+  const kinship = useMemo(() => meId && meId !== person.id ? kinshipSentence(tree, meId, person.id, lang) : null, [tree, meId, person.id, lang]);
+  const estimate = useMemo(() => person.birthDate ? null : estimateBirthYears(tree).get(person.id) ?? null, [tree, person.id, person.birthDate]);
   const subtitleRest = [person.birthDate ? (person.deathDate ? `${person.birthDate.slice(0, 4)}–${person.deathDate.slice(0, 4)}` : `b. ${person.birthDate.slice(0, 4)}`) : person.deathDate ? `d. ${person.deathDate.slice(0, 4)}` : "", locationLine(person.birthCity, person.birthCountry, person.birthPlace) ?? ""].filter(Boolean).join(" · ");
   const relation = (other: Person, label: string) => tree.relationships.find((link) => (label === "Spouse" && link.type === "spouse" && ((link.fromPersonId === person.id && link.toPersonId === other.id) || (link.toPersonId === person.id && link.fromPersonId === other.id))) || (label === "Parents" && link.type === "parent" && link.fromPersonId === other.id && link.toPersonId === person.id) || (label === "Children" && link.type === "parent" && link.fromPersonId === person.id && link.toPersonId === other.id));
   return <section className="person-modal person-modal-v2 person-panel" role="dialog" aria-labelledby="person-modal-title">
@@ -270,7 +275,7 @@ export default function PersonProfilePanel({ person, tree, canEdit, canComment, 
       </div>}
     </div>}
     <div className="person-facts">
-      <div><span className="eyebrow">{t("person.born")}</span><p className="fact-line"><InlineText value={person.birthDate} placeholder="add date" canEdit={canEdit} onSave={patchField("birthDate")} className="fact-date" />{(canEdit || person.birthCity || person.birthCountry) && <> in <InlineText value={person.birthCity} placeholder="city" canEdit={canEdit} onSave={patchField("birthCity")} />{(canEdit || (person.birthCity && person.birthCountry)) && ", "}<InlineText value={person.birthCountry} placeholder="country" canEdit={canEdit} onSave={patchField("birthCountry")} /></>}{!canEdit && !person.birthDate && t("person.birthNotRecorded")}</p></div>
+      <div><span className="eyebrow">{t("person.born")}</span><p className="fact-line"><InlineText value={person.birthDate} placeholder="add date" canEdit={canEdit} onSave={patchField("birthDate")} className="fact-date" />{(canEdit || person.birthCity || person.birthCountry) && <> in <InlineText value={person.birthCity} placeholder="city" canEdit={canEdit} onSave={patchField("birthCity")} />{(canEdit || (person.birthCity && person.birthCountry)) && ", "}<InlineText value={person.birthCountry} placeholder="country" canEdit={canEdit} onSave={patchField("birthCountry")} /></>}{!canEdit && !person.birthDate && t("person.birthNotRecorded")}</p>{estimate && <p className="fact-estimate">{`c. ${estimate.year} — estimated ${estimate.reason}, not recorded`}</p>}</div>
       {/* No death date does not mean "died, date unknown": someone born within a
           lifetime is presumed living, and the record only asks for a death once
           there is reason to think there was one. Offering the death field must

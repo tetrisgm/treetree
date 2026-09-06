@@ -355,7 +355,7 @@ export async function registerViewer(email: string) {
   ]);
 }
 export type MemberIdentity = { email: string; provider: string | null };
-export type Member = { email: string; role: MemberRole; addedBy: string; createdAt: string; links: MemberIdentity[] };
+export type Member = { email: string; role: MemberRole; addedBy: string; createdAt: string; links: MemberIdentity[]; personId?: string | null };
 
 export async function listMembers(): Promise<Member[]> {
   if (d1ReadCircuitOpen()) {
@@ -366,7 +366,7 @@ export async function listMembers(): Promise<Member[]> {
   try {
     await ensureSchema();
     const [members, links, accessMembers] = await Promise.all([
-      env.DB.prepare("SELECT email, role, added_by AS addedBy, created_at AS createdAt FROM members ORDER BY role, email").all<Omit<Member, "links">>(),
+      env.DB.prepare("SELECT email, role, added_by AS addedBy, created_at AS createdAt, person_id AS personId FROM members ORDER BY role, email").all<Omit<Member, "links">>(),
       env.DB.prepare("SELECT email, member_email AS memberEmail, provider FROM member_links ORDER BY created_at").all<{ email: string; memberEmail: string; provider: string | null }>(),
       env.DB.prepare("SELECT email, role, person_id AS personId FROM members ORDER BY email").all<{ email: string; role: MemberRole; personId: string | null }>(),
     ]);
@@ -450,9 +450,12 @@ export async function getMemberPerson(email: string): Promise<string | null> {
 
 /** A person can be claimed by one account: two people sharing a record would
  * make "where I stand in the tree" meaningless for both. */
-export async function claimMemberPerson(email: string, personId: string | null): Promise<"ok" | "taken" | "unknown_person"> {
+/** `actor` is the account doing the seating: the member themself from
+ * IdentifyMe, or an admin seating the family from Settings. */
+export async function claimMemberPerson(email: string, personId: string | null, actor?: string): Promise<"ok" | "taken" | "unknown_person" | "not_a_member"> {
   await ensureSchema();
   const canonical = await resolveMemberEmail(email);
+  if (actor && actor !== canonical && !(await env.DB.prepare("SELECT 1 FROM members WHERE email = ?").bind(canonical).first())) return "not_a_member";
   const now = new Date().toISOString();
   if (personId) {
     const person = await env.DB.prepare("SELECT display_name AS name FROM people WHERE id = ?").bind(personId).first<{ name: string }>();
@@ -462,7 +465,7 @@ export async function claimMemberPerson(email: string, personId: string | null):
     await env.DB.batch([
       env.DB.prepare("UPDATE members SET person_id = ?, updated_at = ? WHERE email = ?").bind(personId, now, canonical),
       env.DB.prepare("INSERT INTO change_log (id, actor_email, kind, summary, payload_json, created_at) VALUES (?, ?, ?, ?, ?, ?)")
-        .bind(crypto.randomUUID(), canonical, "member_identity", `${canonical} is ${person.name} in the tree`, JSON.stringify({ personId }), now),
+        .bind(crypto.randomUUID(), actor ?? canonical, "member_identity", `${canonical} is ${person.name} in the tree`, JSON.stringify({ personId, memberEmail: canonical }), now),
     ]);
     return "ok";
   }

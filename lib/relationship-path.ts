@@ -1,4 +1,6 @@
 import type { FamilyTree, Person } from "./types";
+import type { Lang } from "./i18n";
+import { kinshipLabel } from "./kinship-words";
 
 /** How two people in the tree are related, in the words a family uses:
  * "your second cousin once removed", "your great-grandfather". Computed from
@@ -12,6 +14,16 @@ export type RelationshipResult = {
   path: Person[];
   /** the ancestors both descend from, when the link is by blood */
   sharedAncestors: Person[];
+  /** generations up from `from` and down to `to` via the shared ancestor; 0/0 when not by blood */
+  up?: number;
+  down?: number;
+  /** which of `from`'s parents the blood line runs through - the side a
+   * family means by "paternal uncle", "on my mother's side"; null when the
+   * line does not pass a parent of `from` or their gender is unrecorded */
+  side?: "paternal" | "maternal" | null;
+  /** the child of the shared ancestor on `to`'s line: the sibling a nephew
+   * comes through, the aunt or uncle a cousin comes through */
+  viaTheirs?: Person | null;
 };
 
 type RelationshipIndex = {
@@ -116,6 +128,16 @@ function describeIndexedRelationship(index: RelationshipIndex, fromId: string, t
       .filter((id) => theirs.get(id) === best!.down && mine.get(id) === best!.up)
       .map((id) => byId.get(id))
       .filter((person): person is Person => Boolean(person));
+    const sharedIds = new Set(sharedAncestors.map((person) => person.id));
+    // the side of the family is `from`'s own parent that the line climbs
+    // through; the person a nephew or cousin "comes through" is the shared
+    // ancestor's child on `to`'s line
+    const parentOnLine = up >= 2 ? (parentsOf.get(fromId) ?? []).map((id) => byId.get(id)).find((parent) => parent && [...sharedIds].some((sharedId) => ancestorsOf(parent.id, parentsOf).get(sharedId) === up - 1)) ?? null : null;
+    const side = parentOnLine ? (parentOnLine.gender === "male" ? "paternal" : parentOnLine.gender === "female" ? "maternal" : null) : null;
+    let viaTheirs: Person | null = null;
+    if (down >= 1) for (const [id, steps] of theirs) {
+      if (steps === down - 1 && (parentsOf.get(id) ?? []).some((parentId) => sharedIds.has(parentId))) { viaTheirs = byId.get(id) ?? null; break; }
+    }
     let relationship: string;
     if (up === 0) relationship = greats(down, male ? "son" : female ? "daughter" : "child");
     else if (down === 0) relationship = greats(up, male ? "father" : female ? "mother" : "parent");
@@ -127,7 +149,10 @@ function describeIndexedRelationship(index: RelationshipIndex, fromId: string, t
       const removed = Math.abs(up - down);
       relationship = `${ORDINALS[cousinDegree - 1] ?? `${cousinDegree}th`} cousin${removedSuffix(removed)}`;
     }
-    return { from, to, relationship, path, sharedAncestors };
+    // grandparents, aunts and uncles carry their side in English too: it is
+    // the first thing a family asks ("which grandmother?")
+    if (side && down <= 1 && up >= 2) relationship = `${side} ${relationship}`;
+    return { from, to, relationship, path, sharedAncestors, up, down, side, viaTheirs };
   }
 
   if (spouseOfFrom.has(toId)) {
@@ -176,20 +201,31 @@ export function relationshipSentence(result: RelationshipResult): string {
  * great-aunt", "your second cousin". Marriage links keep their bridge person
  * because "related by marriage" alone is the very ambiguity the tag exists
  * to remove. Null when the records hold no chain at all. */
-export function shortKinship(result: RelationshipResult | null): string | null {
+export type KinshipVoice = "your" | "his" | "her" | "their";
+export function shortKinship(result: RelationshipResult | null, voice: KinshipVoice = "your"): string | null {
   if (!result || result.relationship === "not connected in the records") return null;
-  if (result.relationship === "the same person") return "you";
-  return `your ${result.relationship}`;
+  if (result.relationship === "the same person") return voice === "your" ? "you" : null;
+  // "your related by marriage, through Farajollah" is not English; on a card
+  // the bridge belongs after the word, not inside a possessive
+  if (result.relationship.startsWith("related by marriage")) {
+    const through = result.relationship.includes("through ") ? result.relationship.split("through ")[1] : null;
+    return `${voice} relative by marriage${through ? `, via ${through}` : ""}`;
+  }
+  return `${voice} ${result.relationship}`;
 }
+
+/** the possessive to label others from one person's seat */
+export const voiceFor = (person: Person | undefined, isViewer: boolean): KinshipVoice =>
+  isViewer ? "your" : person?.gender === "male" ? "his" : person?.gender === "female" ? "her" : "their";
 
 /** Every person's kinship to one viewer, computed once per tree so a canvas
  * of hundreds of cards can label each one without a search apiece. */
-export function kinshipMap(tree: FamilyTree, meId: string | null | undefined): Map<string, string> {
+export function kinshipMap(tree: FamilyTree, meId: string | null | undefined, voice: KinshipVoice = "your", lang: Lang = "en"): Map<string, string> {
   const labels = new Map<string, string>();
   if (!meId || !tree.people.some((person) => person.id === meId)) return labels;
   const describe = createRelationshipDescriber(tree);
   for (const person of tree.people) {
-    const label = shortKinship(describe(meId, person.id));
+    const label = lang === "en" ? shortKinship(describe(meId, person.id), voice) : kinshipLabel(describe(meId, person.id), lang, voice);
     if (label) labels.set(person.id, label);
   }
   return labels;

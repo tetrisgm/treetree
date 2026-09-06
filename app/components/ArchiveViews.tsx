@@ -24,7 +24,7 @@ export function TimelineView({ tree, onSelect, meId }: { tree: FamilyTree; onSel
     {events.length ? <ol className="timeline-list">{events.map((event) => {
       const person = event.personIds.length === 1 ? tree.people.find((candidate) => candidate.id === event.personIds[0]) : undefined;
       const isMe = Boolean(meId && event.personIds.includes(meId));
-      return <li key={event.id} className={isMe ? "is-me" : undefined} ref={isMe ? scrollHere : undefined}><time>{event.year}</time><span className={`timeline-dot is-${event.kind}`} /><button type="button" disabled={!person} onClick={() => person && onSelect(person)}><span>{event.title}</span><strong>{prettyDate(event.date)}{event.detail ? ` · ${event.detail}` : ""}</strong></button></li>;
+      return <li key={event.id} className={isMe ? "is-me" : undefined} ref={isMe ? scrollHere : undefined}><time>{event.estimated ? `c. ${event.year}` : event.year}</time><span className={`timeline-dot is-${event.kind}`} /><button type="button" disabled={!person} onClick={() => person && onSelect(person)}><span>{event.title}</span><strong>{prettyDate(event.date)}{event.detail ? ` · ${event.detail}` : ""}</strong></button></li>;
     })}</ol> : <p className="archive-empty">Dates added to people and stories will build this timeline.</p>}
   </section>;
 }

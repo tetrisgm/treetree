@@ -28,7 +28,7 @@ async function openView(page: Page, name: string) {
 }
 
 test.beforeEach(async ({ context, baseURL }) => {
-  await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@example.com"), url: baseURL ?? "http://localhost:8787" }]);
+  await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@archive.example"), url: baseURL ?? "https://archive.example" }]);
 });
 
 test("the archive opens on the Tree", async ({ page }) => {
@@ -226,7 +226,7 @@ for (const [label, width, height] of [["iPhone", 390, 844], ["iPad mini portrait
     const context = await browser.newContext({
       viewport: { width, height }, isMobile: true, hasTouch: true, deviceScaleFactor: 2,
     });
-    await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@example.com"), url: baseURL ?? "http://localhost:8787" }]);
+    await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@archive.example"), url: baseURL ?? "https://archive.example" }]);
     const page = await context.newPage();
     await ready(page);
     await page.waitForTimeout(2500);

@@ -32,14 +32,14 @@ const rel = (from: string, to: string) => describeRelationship(tree, from, to)?.
 describe("relationship paths", () => {
   it("names the direct line in both directions", () => {
     expect(rel("me", "f")).toBe("father");
-    expect(rel("me", "gf")).toBe("grandfather");
+    expect(rel("me", "gf")).toBe("paternal grandfather");
     expect(rel("gf", "me")).toBe("grandson");
-    expect(rel("cousKid", "gf")).toBe("great-grandfather");
+    expect(rel("cousKid", "gf")).toBe("maternal great-grandfather");
   });
 
   it("names siblings, aunts, uncles and nephews", () => {
     expect(rel("me", "sis")).toBe("sister");
-    expect(rel("me", "u")).toBe("uncle");
+    expect(rel("me", "u")).toBe("paternal uncle");
     expect(rel("u", "me")).toBe("nephew");
     expect(rel("gf", "cousKid")).toBe("great-granddaughter");
   });
@@ -61,7 +61,7 @@ describe("relationship paths", () => {
   });
 
   it("does not claim a direct ancestor is shared with himself", () => {
-    expect(relationshipSentence(describeRelationship(tree, "me", "gf")!)).toBe("Grandfather is Me's grandfather.");
+    expect(relationshipSentence(describeRelationship(tree, "me", "gf")!)).toBe("Grandfather is Me's paternal grandfather.");
   });
 
   it("reuses one graph index when describing several pairs", () => {
@@ -73,19 +73,53 @@ describe("relationship paths", () => {
 });
 
 describe("kinship tags", () => {
+  it("says relatives by marriage in English, not in a broken possessive", () => {
+    const inLaw = kinshipMap(tree, "aunt").get("me");
+    expect(inLaw).toMatch(/^your relative by marriage(, via .+)?$/);
+  });
   it("labels every person from the viewer's seat", () => {
     const tags = kinshipMap(tree, "me");
     expect(tags.get("f")).toBe("your father");
-    expect(tags.get("u")).toBe("your uncle");
-    expect(tags.get("gf")).toBe("your grandfather");
+    expect(tags.get("u")).toBe("your paternal uncle");
+    expect(tags.get("gf")).toBe("your paternal grandfather");
     expect(tags.get("cous")).toBe("your first cousin");
     expect(tags.get("wife")).toBe("your wife");
     expect(tags.get("me")).toBe("you");
     expect(tags.has("stranger")).toBe(false);
   });
+  it("labels from a selected person's seat when the viewer is unknown", () => {
+    const tags = kinshipMap(tree, "cous", "her");
+    expect(tags.get("u")).toBe("her father");
+    expect(tags.get("me")).toBe("her first cousin");
+    expect(tags.has("cous")).toBe(false);
+  });
   it("labels nobody when the viewer has not said who they are", () => {
     expect(kinshipMap(tree, null).size).toBe(0);
     expect(kinshipMap(tree, "nobody").size).toBe(0);
     expect(shortKinship(null)).toBeNull();
+  });
+});
+
+describe("sides and the family's own words", () => {
+  it("names the side of the family for uncles and grandparents", () => {
+    expect(rel("me", "u")).toBe("paternal uncle");
+    expect(rel("me", "gf")).toBe("paternal grandfather");
+    expect(rel("me", "gm")).toBe("paternal grandmother");
+    expect(describeRelationship(tree, "me", "cous")?.side).toBe("paternal");
+    expect(describeRelationship(tree, "me", "cous")?.viaTheirs?.id).toBe("u");
+    expect(describeRelationship(tree, "u", "me")?.viaTheirs?.id).toBe("f");
+    expect(rel("me", "f")).toBe("father");
+    expect(rel("me", "sis")).toBe("sister");
+  });
+  it("speaks Persian and French from the same result", async () => {
+    const { kinshipLabel } = await import("../lib/kinship-words");
+    const label = (a: string, b: string, lang: "en" | "fa" | "fr") => kinshipLabel(describeRelationship(tree, a, b), lang);
+    expect(label("me", "u", "fa")).toBe("عموی شما");
+    expect(label("me", "aunt", "fa")).toBe("خویشاوند سببی از طریق Uncle");
+    expect(label("me", "cous", "fa")).toBe("دخترعموی شما");
+    expect(kinshipLabel(describeRelationship(tree, "u", "me"), "fa", "his")).toBe("برادرزاده‌ی او");
+    expect(label("me", "gf", "fr")).toBe("votre grand-père paternel");
+    expect(label("me", "cous", "fr")).toBe("votre cousine germaine");
+    expect(label("me", "u", "en")).toBe("your paternal uncle");
   });
 });

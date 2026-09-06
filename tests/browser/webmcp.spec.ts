@@ -33,7 +33,7 @@ async function installMockModelContext(page: Page) {
 }
 
 test.beforeEach(async ({ context, page, baseURL }) => {
-  await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@example.com"), url: baseURL ?? "http://localhost:8787" }]);
+  await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@archive.example"), url: baseURL ?? "https://archive.example" }]);
   await installMockModelContext(page);
 });
 

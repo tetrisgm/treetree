@@ -1,6 +1,9 @@
 "use client";
 
 import { kinshipMap } from "../../lib/relationship-path";
+import { estimateBirthYears } from "../../lib/estimated-dates";
+import { answerableGaps } from "../../lib/who-can-answer";
+import { knownPlaces } from "../../lib/places";
 import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { FamilyTree, OpenQuestion, Person } from "../../lib/types";
 import { buildGenerations, buildRelationMaps, hiddenRelativeCount } from "../../lib/tree-layout";
@@ -457,7 +460,9 @@ function buildDescentModel(tree: FamilyTree) {
 
 /** The whole family as a collapsible indented outline. */
 export function OutlineView({ tree, onSelect, onPreview, meId }: { tree: FamilyTree; onSelect: (person: Person) => void; onPreview?: (person: Person | null) => void; meId?: string | null }) {
-  const kinship = useMemo(() => kinshipMap(tree, meId), [tree, meId]);
+  const { lang } = useLanguage();
+  const kinship = useMemo(() => kinshipMap(tree, meId, "your", lang), [tree, meId, lang]);
+  const estimates = useMemo(() => estimateBirthYears(tree), [tree]);
   // four hundred names is a long way to scroll to find yourself
   const scrolledTo = useRef<string | null>(null);
   const scrollHere = (element: HTMLElement | null) => {
@@ -489,7 +494,7 @@ export function OutlineView({ tree, onSelect, onPreview, meId }: { tree: FamilyT
       <button type="button" className="outline-name" onClick={() => onSelect(person)}
         onMouseEnter={() => onPreview?.(person)} onMouseLeave={() => onPreview?.(null)}
         onFocus={() => onPreview?.(person)} onBlur={() => onPreview?.(null)}>{person.displayName}</button>
-      {personYears(person) && <span className="outline-years">{personYears(person)}</span>}
+      {personYears(person, estimates.get(person.id)?.year) && <span className="outline-years">{personYears(person, estimates.get(person.id)?.year)}</span>}
       {kinship.get(person.id) && <span className="outline-kin">{kinship.get(person.id)}</span>}
       {spouses.map((spouse) => <span className="outline-spouse" key={spouse.id}>⚭ <button type="button" onClick={() => onSelect(spouse)}
         onMouseEnter={() => onPreview?.(spouse)} onMouseLeave={() => onPreview?.(null)}
@@ -509,7 +514,7 @@ export function OutlineView({ tree, onSelect, onPreview, meId }: { tree: FamilyT
 
 /** Every incomplete record as a browsable, searchable list of cards; click
  * one to fill its missing details in place. */
-type FillSortKey = "first" | "last" | "birth" | "generation" | "missing";
+type FillSortKey = "first" | "last" | "birth" | "generation" | "missing" | "answerable";
 
 /** "First name" is everything except the family name, which is the final
  * token that is not a parenthesized alias or archive marker. Single-token
@@ -598,13 +603,13 @@ function OpenQuestionsCard({ onTreeChange }: { onTreeChange: (tree: FamilyTree) 
   </div>;
 }
 
-export function MissingDataView({ tree, onSaved, onOpen }: { tree: FamilyTree; onSaved: (tree: FamilyTree) => void; onOpen: (person: Person) => void }) {
+export function MissingDataView({ tree, onSaved, onOpen, meId }: { tree: FamilyTree; onSaved: (tree: FamilyTree) => void; onOpen: (person: Person) => void; meId?: string | null }) {
   const { t } = useLanguage();
   const maps = useMemo(() => buildRelationMaps(tree), [tree]);
   // Spouse-aware rows: a married-in relative with no recorded parents stands
   // on their spouse's generation, not on the founders' row.
   const generationOf = useMemo(() => buildGenerations(tree).depth, [tree]);
-  const [sortKey, setSortKey] = useState<FillSortKey>("last");
+  const [sortKey, setSortKey] = useState<FillSortKey>("answerable");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
   const [genFilter, setGenFilter] = useState("");
   const [query, setQuery] = useState("");
@@ -647,6 +652,13 @@ export function MissingDataView({ tree, onSaved, onOpen }: { tree: FamilyTree; o
   }, [expandedId]);
   // the archive's own answer about a life, shared with the record panel
   const lifeGenerations = useMemo(() => familyGenerations(tree), [tree]);
+  /* Who could close each gap: the position of a person in the answerable
+     ranking, and the living relatives to ask. Computed once - it walks the
+     graph from every incomplete record. */
+  const gaps = useMemo(() => answerableGaps(tree, meId ? [meId] : []), [tree, meId]);
+  const places = useMemo(() => knownPlaces(tree.people), [tree.people]);
+  const answerRank = useMemo(() => new Map(gaps.map((gap, index) => [gap.person.id, index])), [gaps]);
+  const askAbout = useMemo(() => new Map(gaps.map((gap) => [gap.person.id, gap.couldKnow])), [gaps]);
   const deathRecorded = (person: Person) => lifeStatus(person, lifeGenerations) === "died";
   const presumedLiving = (person: Person) => lifeStatus(person, lifeGenerations) === "living";
   const missingOf = (person: Person) => {
@@ -672,6 +684,12 @@ export function MissingDataView({ tree, onSaved, onOpen }: { tree: FamilyTree; o
     }
     if (sortKey === "generation") return ((generationOf.get(a.id) ?? 0) - (generationOf.get(b.id) ?? 0)) * sortDir || nameOrder(a, b);
     if (sortKey === "missing") return (missingOf(a).length - missingOf(b).length) * sortDir || nameOrder(a, b);
+    // the gaps someone alive could actually close, before the ones only a
+    // document could: a birth date four generations up is archaeology
+    if (sortKey === "answerable") {
+      const ra = answerRank.get(a.id) ?? Number.MAX_SAFE_INTEGER, rb = answerRank.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+      return (ra - rb) * sortDir || nameOrder(a, b);
+    }
     const na = fillNameParts(a), nb = fillNameParts(b);
     if (sortKey === "first") return na.first.localeCompare(nb.first) * sortDir || na.last.localeCompare(nb.last);
     if (!na.last !== !nb.last) return na.last ? -1 : 1;
@@ -717,8 +735,13 @@ export function MissingDataView({ tree, onSaved, onOpen }: { tree: FamilyTree; o
     }
   };
   const field = (key: string, placeholder: string) =>
-    <input className="fill-input" value={form[key] ?? ""} placeholder={placeholder} onChange={(event) => setForm({ ...form, [key]: event.target.value })} />;
+    <input className="fill-input" value={form[key] ?? ""} placeholder={placeholder}
+      // the spellings already in the archive, so a new record joins them
+      list={key.endsWith("City") ? "known-cities" : key.endsWith("Country") ? "known-countries" : key === "residence" ? "known-cities" : undefined}
+      onChange={(event) => setForm({ ...form, [key]: event.target.value })} />;
   return <section className="fill-view" aria-label="Fill in missing details" ref={viewRef}>
+    <datalist id="known-cities">{places.cities.map((city) => <option key={city} value={city} />)}</datalist>
+    <datalist id="known-countries">{places.countries.map((country) => <option key={country} value={country} />)}</datalist>
     <OpenQuestionsCard onTreeChange={onSaved} />
     <div className="fill-progress">
       <strong>{complete}</strong> of {tree.people.length} records are complete · <strong>{incomplete.length}</strong> with gaps
@@ -733,7 +756,7 @@ export function MissingDataView({ tree, onSaved, onOpen }: { tree: FamilyTree; o
     </div>
     <div className="fill-table-head" aria-hidden="true">
       <span />
-      {([["first", "First name"], ["last", "Last name"], ["birth", "Born"], ["generation", "Gen"], ["missing", "Missing"]] as [FillSortKey, string][]).map(([key, label]) =>
+      {([["answerable", "Who can answer"], ["first", "First name"], ["last", "Last name"], ["birth", "Born"], ["generation", "Gen"], ["missing", "Missing"]] as [FillSortKey, string][]).map(([key, label]) =>
         <button type="button" key={key} className={`fill-th fill-th-${key} ${sortKey === key ? "is-active" : ""}`}
           onClick={() => { if (sortKey === key) setSortDir(sortDir === 1 ? -1 : 1); else { setSortKey(key); setSortDir(1); } }}>
           {label}{sortKey === key && <span className="fill-th-dir">{sortDir === 1 ? "▲" : "▼"}</span>}
@@ -759,6 +782,7 @@ export function MissingDataView({ tree, onSaved, onOpen }: { tree: FamilyTree; o
             <span className="fill-cell fill-cell-year">{fillBirthYear(person) ?? "—"}</span>
             <span className="fill-cell fill-cell-gen" title={(maps.parentsOf.get(person.id) ?? []).length || (maps.childrenOf.get(person.id) ?? []).length ? undefined : "Placed by marriage — no recorded parents or children"}>{(maps.parentsOf.get(person.id) ?? []).length || (maps.childrenOf.get(person.id) ?? []).length ? generation + 1 : `~${generation + 1}`}</span>
             <span className="fill-row-missing">{missingOf(person).join(" · ")}</span>
+            {(askAbout.get(person.id)?.length ?? 0) > 0 && <span className="fill-row-ask" title="Living relatives closest to this record">ask {askAbout.get(person.id)!.slice(0, 2).map((who) => who.displayName).join(" or ")}</span>}
           </button>
           {open && <div className="fill-fields">
             <p className="fill-context">{context(person)}</p>
