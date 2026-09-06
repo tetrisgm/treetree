@@ -84,6 +84,20 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
   // Where the archive opens: on the person this account says it is, if it
   // has said, and otherwise on the family it has always opened on.
   const [identity, setIdentity] = useState<string | null>(viewer.personId ?? null);
+  // a visitor without an account may still have said who they are, in this browser
+  const [localSeatSkipped, setLocalSeatSkipped] = useState(false);
+  useEffect(() => {
+    if (viewer.personId) return;
+    // after hydration, not during it: the server rendered no seat
+    const timer = setTimeout(() => {
+      let saved: string | null = null;
+      try { saved = window.localStorage.getItem("archive-seat"); } catch { /* private mode */ }
+      if (saved === "skip") setLocalSeatSkipped(true);
+      else if (saved) setIdentity((current) => current ?? saved);
+    }, 0);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [ingesting, setIngesting] = useState<string | null>(null);
   const [focalId, setFocalId] = useState<string | null>(viewer.personId ?? null);
   /* Everything on this page is server-rendered before React attaches, so a
@@ -436,6 +450,9 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
             {viewer.signedIn && viewer.role && !identity && treeLoaded && tree.people.length > 0 && (
               <IdentifyMe tree={tree} onClaimed={(person) => { setIdentity(person.id); openPerson(person); }} />
             )}
+            {!(viewer.signedIn && viewer.role) && !identity && !localSeatSkipped && treeLoaded && tree.people.length > 0 && (
+              <IdentifyMe tree={tree} local onClaimed={(person) => { setIdentity(person.id); try { window.localStorage.setItem("archive-seat", person.id); } catch { /* private mode */ } openPerson(person); }} onSkip={() => { setLocalSeatSkipped(true); try { window.localStorage.setItem("archive-seat", "skip"); } catch { /* private mode */ } }} />
+            )}
             {!viewer.canEdit ? (
               <PublicArchiveChat signedIn={viewer.signedIn} tree={tree} greeting={greeting} focusPerson={selectedPerson} onClearFocus={closePerson} onOpenPerson={(person) => openPerson(person)} onPeopleMentioned={(people) => { setHighlightedIds(people.map((person) => person.id)); setViewMode("tree"); }} webMcpDemo={webMcpDemo} onSwitchView={(view) => setViewMode(view as ViewMode)} />
             ) : (
@@ -523,11 +540,11 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
 
             <div className="relative h-full min-h-0 overflow-hidden stage-bg">
               {viewMode !== "timeline" && viewMode !== "map" && !treeLoaded && <div className="family-canvas" aria-busy="true" aria-label="Loading the family tree" />}
-              {viewMode === "tree" && treeLoaded && (tree.people.length ? <FamilyTreeCanvas tree={tree} meId={identity} highlightedIds={highlightedIds} focusPersonId={highlightedIds[0]} onSelect={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
+              {viewMode === "tree" && treeLoaded && (tree.people.length ? <FamilyTreeCanvas tree={tree} meId={identity} pivotId={selectedPerson?.id ?? null} highlightedIds={highlightedIds} focusPersonId={highlightedIds[0]} onSelect={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
               <Suspense fallback={<div className="family-canvas" aria-busy="true" aria-label="Loading view" />}>
                 {viewMode === "family" && treeLoaded && (focal ? <FocusFamilyView tree={tree} focusId={focal.id} selectedId={selectedPerson?.id ?? null} canBack canForward onBack={() => window.history.back()} onForward={() => window.history.forward()} onPick={(person) => openPerson(person)} onSelectOnly={(person) => openPerson(person, true, false)} onPreview={setHoverPreview} onOpen={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
                 {viewMode === "list" && treeLoaded && <OutlineView tree={tree} onSelect={(person) => openPerson(person)} onPreview={setHoverPreview} meId={identity} />}
-                {viewMode === "fill" && viewer.canEdit && treeLoaded && <MissingDataView tree={tree} onSaved={setTree} onOpen={(person) => openPerson(person)} />}
+                {viewMode === "fill" && viewer.canEdit && treeLoaded && <MissingDataView tree={tree} meId={identity} onSaved={setTree} onOpen={(person) => openPerson(person)} />}
                 {viewMode === "timeline" && <TimelineView tree={tree} meId={identity} onSelect={(person) => { setHighlightedIds([person.id]); setSelectedPerson(person); }} />}
                 {viewMode === "calendar" && treeLoaded && <CalendarView tree={tree} onSelect={(person) => openPerson(person)} />}
                 {viewMode === "stats" && treeLoaded && <StatisticsView tree={tree} onSelect={(person) => openPerson(person)} />}

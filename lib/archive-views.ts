@@ -1,11 +1,14 @@
 import type { FamilyTree, Person } from "./types";
 import { canonicalCity, canonicalCountry, placeKey, placeLabel } from "./places";
+import { estimateBirthYears } from "./estimated-dates";
 
 export type TimelineEvent = {
   id: string;
   year: number;
   date: string;
   kind: "birth" | "death" | "story";
+  /** the year is derived from relatives, not recorded */
+  estimated?: boolean;
   title: string;
   detail: string;
   personIds: string[];
@@ -53,10 +56,15 @@ const place = placeLabel;
 
 export function buildTimeline(tree: FamilyTree): TimelineEvent[] {
   const events: TimelineEvent[] = [];
+  const estimates = estimateBirthYears(tree);
   for (const person of tree.people) {
     const birthYear = yearOf(person.birthDate);
     const deathYear = yearOf(person.deathDate);
+    const estimate = birthYear ? null : estimates.get(person.id);
     if (birthYear && person.birthDate) events.push({ id: `birth-${person.id}`, year: birthYear, date: person.birthDate, kind: "birth", title: `${person.displayName} was born`, detail: place(person.birthCity, person.birthCountry, person.birthPlace), personIds: [person.id] });
+    // an estimated birth stands on the timeline too, so the undated majority
+    // of the family is not simply absent from its own history
+    else if (estimate) events.push({ id: `birth-${person.id}`, year: estimate.year, date: String(estimate.year), kind: "birth", estimated: true, title: `${person.displayName} was born, about`, detail: `estimated ${estimate.reason}`, personIds: [person.id] });
     if (deathYear && person.deathDate) events.push({ id: `death-${person.id}`, year: deathYear, date: person.deathDate, kind: "death", title: `${person.displayName} died`, detail: place(person.deathCity, person.deathCountry, person.deathPlace), personIds: [person.id] });
   }
   for (const story of tree.stories) {

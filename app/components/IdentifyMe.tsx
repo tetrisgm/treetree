@@ -10,7 +10,9 @@ import { buildRelationMaps } from "../../lib/tree-layout";
  * grandson can carry his great-grandfather's name exactly. So every
  * suggestion says when the person was born and who their parents were, which
  * is what actually tells two people of the same name apart. */
-export default function IdentifyMe({ tree, onClaimed }: { tree: FamilyTree; onClaimed: (person: Person) => void }) {
+/** `local` seats a visitor for this browser only - the password-sharing
+ * family who never sign in still get "your father" on every card. */
+export default function IdentifyMe({ tree, onClaimed, local = false, onSkip }: { tree: FamilyTree; onClaimed: (person: Person) => void; local?: boolean; onSkip?: () => void }) {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -30,6 +32,7 @@ export default function IdentifyMe({ tree, onClaimed }: { tree: FamilyTree; onCl
     .slice(0, 8);
 
   async function claim(person: Person) {
+    if (local) { onClaimed(person); return; }
     setBusy(true);
     setError("");
     try {
@@ -57,9 +60,9 @@ export default function IdentifyMe({ tree, onClaimed }: { tree: FamilyTree; onCl
     <div className="identify-card">
       <div className="identify-head">
         <p className="eyebrow">Who are you in the tree?</p>
-        <button type="button" className="identify-skip" onClick={() => setDismissed(true)} aria-label="Not now">×</button>
+        <button type="button" className="identify-skip" onClick={() => { setDismissed(true); onSkip?.(); }} aria-label="Not now">×</button>
       </div>
-      <p>Type your name. Once the archive knows where you stand, it opens on you rather than on the founders.</p>
+      <p>{local ? "Type your name and every card will say what that person is to you. This stays in your browser." : "Type your name. Once the archive knows where you stand, it opens on you rather than on the founders."}</p>
       <input
         className="modal-input" value={query} autoComplete="off" placeholder="Your name"
         aria-label="Your name in the family tree"

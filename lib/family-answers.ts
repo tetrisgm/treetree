@@ -11,6 +11,7 @@
  */
 
 import { placeLabel } from "./places";
+import { estimateBirthYears } from "./estimated-dates";
 import type { FamilyTree, Person } from "./types";
 import { describeRelationship, relationshipSentence } from "./relationship-path";
 import { buildGenerations } from "./tree-layout";
@@ -64,8 +65,10 @@ export function lifeStory(tree: FamilyTree, personId: string): string {
   const stories = tree.stories.filter((story) => story.personIds.includes(person.id));
   const born = year(person.birthDate);
   const died = year(person.deathDate);
+  const estimate = born ? null : estimateBirthYears(tree).get(person.id);
   const lines: string[] = [];
   const birthPlace = placeLabel(person.birthCity, person.birthCountry, person.birthPlace);
+  if (estimate) lines.push(`No birth date is recorded for ${person.displayName}; about ${estimate.year} is a fair estimate, ${estimate.reason}.`);
   lines.push(`${person.displayName}${born ? ` was born in ${born}` : ""}${birthPlace ? `${born ? "" : " was born"} in ${birthPlace}` : ""}${parents.length ? `, ${born || birthPlace ? "to" : "the child of"} ${parents.map((p) => p.displayName).join(" and ")}` : ""}.`.replace(" .", "."));
   if (spouses.length) lines.push(`${person.gender === "female" ? "She" : person.gender === "male" ? "He" : "They"} married ${spouses.map((s) => s.displayName).join(", and later ")}.`);
   if (children.length) lines.push(`${children.length === 1 ? "One child is recorded" : `${children.length} children are recorded`}: ${children.map(briefName).join("; ")}.`);
@@ -110,11 +113,19 @@ export function familyInYear(tree: FamilyTree, when: number): string {
     return birth !== null && birth <= when && (death === null || death >= when);
   });
   const eldest = alive.length ? alive.reduce((a, b) => (year(a.birthDate)! < year(b.birthDate)! ? a : b)) : null;
+  // the undated majority, placed by their relatives' dates
+  const estimates = estimateBirthYears(tree);
+  const aliveByEstimate = tree.people.filter((person) => {
+    const estimate = year(person.birthDate) ? null : estimates.get(person.id);
+    const death = year(person.deathDate);
+    return estimate && estimate.year <= when && (death === null || death >= when) && when - estimate.year < 95;
+  });
   const lines = [
     born.length ? `Born in ${when}: ${born.map((p) => p.displayName).join(", ")}.` : "",
     died.length ? `Died in ${when}: ${died.map(briefName).join(", ")}.` : "",
     alive.length ? `${alive.length} people with recorded birth years were alive${eldest ? `; the eldest was ${eldest.displayName}, about ${when - year(eldest.birthDate)!}` : ""}.` : `No one with a recorded birth year was alive in ${when}.`,
-    "Only people with recorded years are counted - most of this archive's records carry no dates, so the real family was larger.",
+    aliveByEstimate.length ? `By estimate from their relatives' dates, about ${aliveByEstimate.length} more were probably alive${aliveByEstimate.length <= 12 ? `: ${aliveByEstimate.map((p) => `${p.displayName} (c. ${estimates.get(p.id)!.year})`).join(", ")}` : ""}. Estimates are marked and never recorded.` : "",
+    "Recorded years are counted first; estimated ones are called estimates.",
   ].filter(Boolean);
   return lines.join("\n");
 }

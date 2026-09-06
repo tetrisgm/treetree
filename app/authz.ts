@@ -7,7 +7,7 @@ import { ACCESS_COOKIE } from "../lib/access";
 // mutate the archive. Flipping this to true reopens the old test mode where
 // every visitor could edit.
 export const TEMPORARY_OPEN_EDITOR = false;
-const temporaryEditor: AppleUser = { subject: "temporary-open-editor", email: "temporary-open-editor@example.com", displayName: "Temporary editor" };
+const temporaryEditor: AppleUser = { subject: "temporary-open-editor", email: "temporary-open-editor@archive.example", displayName: "Temporary editor" };
 
 export type ViewerRole = MemberRole | null;
 

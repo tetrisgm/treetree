@@ -11,13 +11,13 @@ function viewerSessionCookie(): string {
   const secret = process.env.PLAYWRIGHT_SESSION_SECRET || "";
   if (!secret) throw new Error("Set PLAYWRIGHT_SESSION_SECRET to your deployment's AUTH_SESSION_SECRET (and PLAYWRIGHT_BASE_URL / PLAYWRIGHT_MEMBER_EMAIL).");
   const b64url = (input: Buffer | string) => Buffer.from(input).toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
-  const payload = b64url(JSON.stringify({ subject: "browser-suite", email: process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@example.com", displayName: "Browser suite", exp: Math.floor(Date.now() / 1000) + 3600 }));
+  const payload = b64url(JSON.stringify({ subject: "browser-suite", email: process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@archive.example", displayName: "Browser suite", exp: Math.floor(Date.now() / 1000) + 3600 }));
   const signature = b64url(createHmac("sha256", secret).update(payload).digest());
   return `${payload}.${signature}`;
 }
 
 test.beforeEach(async ({ context, baseURL }) => {
-  await context.addCookies([{ name: "archive_session", value: viewerSessionCookie(), url: baseURL ?? "http://localhost:8787" }]);
+  await context.addCookies([{ name: "archive_session", value: viewerSessionCookie(), url: baseURL ?? "https://archive.example" }]);
 });
 
 /** The page is server-rendered, so it is on screen before React attaches to
@@ -76,6 +76,19 @@ test("public tree renders as an interactive canvas beside the archive chat", asy
   expect(await page.locator(".tree-card").count()).toBeGreaterThan(0);
   await expect(page.locator(".tree-connectors line")).not.toHaveCount(0);
   await expect(page.locator(".public-chat")).toBeVisible();
+});
+
+test("selecting anyone labels the cards around them from that seat", async ({ page }) => {
+  await openFullTree(page);
+  await expect(page.locator(".tree-card-kin")).toHaveCount(0);
+  // a visitor with no seat of their own clicks a person: every card that
+  // shares a recorded chain with them now says what they are to that person
+  const card = page.locator(".tree-card").first();
+  await card.click();
+  await expect(page.locator(".tree-card-kin").first()).toBeVisible();
+  const tags = await page.locator(".tree-card-kin").allTextContents();
+  expect(tags.length).toBeGreaterThan(0);
+  expect(tags.every((tag) => /^(his|her|their) /.test(tag))).toBe(true);
 });
 
 test("chat sidebar collapses and returns from the left edge", async ({ page }) => {

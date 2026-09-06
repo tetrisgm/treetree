@@ -40,3 +40,19 @@ describe("place spellings", () => {
     expect(origins).not.toMatch(/Ghazvin|Theran/);
   });
 });
+
+describe("the places a form offers", () => {
+  it("offers the archive's own spellings, canonical and deduplicated", async () => {
+    const { knownPlaces } = await import("../lib/places");
+    const { cities, countries } = knownPlaces([
+      { birthCity: "Ghazvin", birthCountry: "Iran" },
+      { birthCity: "Qazvin", deathCity: "Theran" },
+      { residence: "Bandar Anzali" },
+    ]);
+    expect(cities.filter((city) => city === "Qazvin")).toHaveLength(1);
+    expect(cities).toContain("Tehran");
+    expect(cities).toContain("Bandar Anzali");
+    expect(cities).not.toContain("Ghazvin");
+    expect(countries).toContain("Iran");
+  });
+});

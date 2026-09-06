@@ -1,4 +1,5 @@
 import { canonicalCity } from "./places";
+import { estimateBirthYears } from "./estimated-dates";
 import type { FamilyTree, Person } from "./types";
 import { buildGenerations } from "./tree-layout";
 
@@ -8,6 +9,8 @@ export type FamilyStats = {
   men: number;
   unrecordedGender: number;
   withBirthDate: number;
+  /** undated people the graph can still place in a decade */
+  withEstimatedBirthYear: number;
   withPhoto: number;
   withBiography: number;
   stories: number;
@@ -82,6 +85,7 @@ export function buildFamilyStats(tree: FamilyTree): FamilyStats {
     men: tree.people.filter((person) => person.gender === "male").length,
     unrecordedGender: tree.people.filter((person) => !person.gender).length,
     withBirthDate: tree.people.filter((person) => person.birthDate).length,
+    withEstimatedBirthYear: estimateBirthYears(tree).size,
     withPhoto: tree.people.filter((person) => person.photoAttachmentId).length,
     withBiography: tree.people.filter((person) => person.biography).length,
     stories: tree.stories.length,

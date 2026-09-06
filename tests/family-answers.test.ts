@@ -53,7 +53,7 @@ describe("family answers", () => {
     const snapshot = familyInYear(tree, 1972);
     expect(snapshot).toContain("Born in 1972: Roya Golestani");
     expect(snapshot).toContain("Bahram Golestani");
-    expect(snapshot).toContain("Only people with recorded years");
+    expect(snapshot).toContain("Recorded years are counted first");
   });
 
   it("finds namesakes across generations, eldest first", () => {
@@ -76,7 +76,7 @@ describe("intent context for the archivist", () => {
   it("names the asker and precomputes their kinship to mentioned people", () => {
     const context = intentContext(tree, "How am I related to Bahram Golestani?", "p3");
     expect(context).toContain("The person asking is Roya Golestani");
-    expect(context).toMatch(/the asker's (great-)?grandfather/);
+    expect(context).toMatch(/the asker's (paternal |maternal )?(great-)?grandfather/);
   });
 
   it("snapshots years written in Persian digits", () => {

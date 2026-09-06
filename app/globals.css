@@ -1432,3 +1432,16 @@ html[lang="fa"] { font-variant-numeric: normal; }
 .tree-card-kin, .outline-kin { color:var(--accent, #7fb08f); font-size:.7rem; font-style:italic; letter-spacing:.01em; }
 .outline-kin { margin-left:.45em; }
 .person-kinship { margin:.35rem 0 0; color:var(--accent, #7fb08f); font-size:.92rem; font-style:italic; }
+
+/* seating members in the tree, from Settings */
+.settings-member-seat { display:flex; align-items:center; gap:.3rem; min-width:0; }
+.settings-seat { border:1px solid var(--line); border-radius:.5rem; background:transparent; color:var(--muted); font-size:.75rem; padding:.2rem .5rem; white-space:nowrap; }
+.settings-seat:hover { color:var(--ink); border-color:var(--accent); }
+.settings-seat-picker { position:relative; display:flex; flex-direction:column; gap:.3rem; min-width:14rem; }
+.settings-seat-picker .relative-suggestions { position:static; }
+.settings-seat-cancel { align-self:flex-start; border:0; background:transparent; color:var(--muted); font-size:.75rem; }
+
+/* a guess, marked as one */
+.fact-estimate { margin:.2rem 0 0; color:var(--muted); font-size:.78rem; font-style:italic; }
+/* who to ask about a gap */
+.fill-row-ask { color:var(--accent, #7fb08f); font-size:.72rem; font-style:italic; white-space:nowrap; }
