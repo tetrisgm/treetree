@@ -507,7 +507,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
           // the hover preview IS the profile: the same panel a click opens,
           // rendered read-only and inert
           <div className="person-hover-preview" aria-hidden="true">
-            <Suspense fallback={null}><PersonProfilePanel key={hoverPreview.id} person={hoverPreview} tree={tree} canEdit={false} canComment={false} preview onClose={() => {}} onSelect={() => {}} onTreeChange={() => {}} /></Suspense>
+            <Suspense fallback={null}><PersonProfilePanel key={hoverPreview.id} person={hoverPreview} tree={tree} meId={identity} canEdit={false} canComment={false} preview onClose={() => {}} onSelect={() => {}} onTreeChange={() => {}} /></Suspense>
           </div>
         )}
         {hoverPlace && viewMode === "map" && hoverPlace.key !== placeFocus?.key && (
@@ -516,14 +516,14 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
           </div>
         )}
         {!selectedPerson && placeFocus && viewMode === "map" && <PlacePanel place={placeFocus} onPick={(person) => openPerson(person, true, false)} onClose={() => setPlaceFocus(null)} />}
-        {selectedPerson && <Suspense fallback={<section className="person-modal person-modal-v2 person-panel" aria-busy="true" aria-label="Loading person" />}><PersonProfilePanel key={selectedPerson.id} person={selectedPerson} tree={tree} canEdit={viewer.canEdit} canComment={Boolean(viewer.role)} onClose={closePerson} onSelect={(person) => openPerson(person)} onTreeChange={(next) => { setTree(next); setSelectedPerson(next.people.find((candidate) => candidate.id === selectedPerson.id) ?? null); }} /></Suspense>}
+        {selectedPerson && <Suspense fallback={<section className="person-modal person-modal-v2 person-panel" aria-busy="true" aria-label="Loading person" />}><PersonProfilePanel key={selectedPerson.id} person={selectedPerson} tree={tree} meId={identity} canEdit={viewer.canEdit} canComment={Boolean(viewer.role)} onClose={closePerson} onSelect={(person) => openPerson(person)} onTreeChange={(next) => { setTree(next); setSelectedPerson(next.people.find((candidate) => candidate.id === selectedPerson.id) ?? null); }} /></Suspense>}
         <section className="relative h-full min-h-0 min-w-0 flex-1 overflow-hidden">
           <div className="absolute inset-0 tree-grid opacity-20" aria-hidden="true" />
           <div className="relative h-full min-h-0">
 
             <div className="relative h-full min-h-0 overflow-hidden stage-bg">
               {viewMode !== "timeline" && viewMode !== "map" && !treeLoaded && <div className="family-canvas" aria-busy="true" aria-label="Loading the family tree" />}
-              {viewMode === "tree" && treeLoaded && (tree.people.length ? <FamilyTreeCanvas tree={tree} highlightedIds={highlightedIds} focusPersonId={highlightedIds[0]} onSelect={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
+              {viewMode === "tree" && treeLoaded && (tree.people.length ? <FamilyTreeCanvas tree={tree} meId={identity} highlightedIds={highlightedIds} focusPersonId={highlightedIds[0]} onSelect={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
               <Suspense fallback={<div className="family-canvas" aria-busy="true" aria-label="Loading view" />}>
                 {viewMode === "family" && treeLoaded && (focal ? <FocusFamilyView tree={tree} focusId={focal.id} selectedId={selectedPerson?.id ?? null} canBack canForward onBack={() => window.history.back()} onForward={() => window.history.forward()} onPick={(person) => openPerson(person)} onSelectOnly={(person) => openPerson(person, true, false)} onPreview={setHoverPreview} onOpen={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
                 {viewMode === "list" && treeLoaded && <OutlineView tree={tree} onSelect={(person) => openPerson(person)} onPreview={setHoverPreview} meId={identity} />}

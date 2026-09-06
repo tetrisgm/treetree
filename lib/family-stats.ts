@@ -1,3 +1,4 @@
+import { canonicalCity } from "./places";
 import type { FamilyTree, Person } from "./types";
 import { buildGenerations } from "./tree-layout";
 
@@ -68,8 +69,8 @@ export function buildFamilyStats(tree: FamilyTree): FamilyStats {
   for (const person of tree.people) {
     const born = year(person.birthDate);
     if (born) bump(decades, `${Math.floor(born / 10) * 10}s`);
-    bump(places, person.birthCity);
-    bump(places, person.deathCity);
+    bump(places, canonicalCity(person.birthCity));
+    bump(places, canonicalCity(person.deathCity));
     const parts = nameParts(person);
     if (parts.length > 1) bump(surnames, parts.slice(1).join(" "));
     if (parts.length) bump(givenNames, parts[0]);

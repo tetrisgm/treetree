@@ -1,5 +1,7 @@
 "use client";
 
+import { placeLabel } from "../../lib/places";
+import { kinshipMap } from "../../lib/relationship-path";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { MutableRefObject } from "react";
 import type { FamilyTree, Person } from "../../lib/types";
@@ -109,8 +111,9 @@ type ParentHook = {
 /** The graph scene is independent from the camera. React.memo keeps pointer,
  * wheel, and focus-animation camera commits from rebuilding every card and
  * connector; it rerenders only when graph/selection inputs actually change. */
-const FamilyTreeScene = memo(function FamilyTreeScene({ visibleTree, positions, spouseLines, hooks, highlighted, branchIds, collapsed, hiddenCounts, onSelect, onOpenBranch, onToggleBranch }: {
+const FamilyTreeScene = memo(function FamilyTreeScene({ visibleTree, positions, spouseLines, hooks, highlighted, branchIds, collapsed, hiddenCounts, kinship, onSelect, onOpenBranch, onToggleBranch }: {
   visibleTree: FamilyTree;
+  kinship: Map<string, string>;
   positions: Map<string, CanvasPosition>;
   spouseLines: SpouseLine[];
   hooks: ParentHook[];
@@ -134,12 +137,12 @@ const FamilyTreeScene = memo(function FamilyTreeScene({ visibleTree, positions, 
     </svg>
     {visibleTree.people.map((person) => {
       const p = positions.get(person.id) ?? { x: 0, y: 90 };
-      const location = [person.birthCity, person.birthCountry].filter(Boolean).join(", ");
+      const location = placeLabel(person.birthCity, person.birthCountry);
       const activate = (element: HTMLButtonElement) => {
         onOpenBranch(person, element.getBoundingClientRect());
         onSelect(person);
       };
-      return <button className={`tree-card ${highlighted.has(person.id) ? "is-highlighted" : ""}`} style={{ left: `${p.x}px`, top: `${p.y}px`, cursor: "pointer" }} key={person.id} data-person-id={person.id} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => { event.stopPropagation(); if (event.button === 0) activate(event.currentTarget); }} onClick={(event) => { if (event.detail === 0) activate(event.currentTarget); }} aria-label={`Open ${person.displayName}`}><span className="tree-card-portrait">{person.photoAttachmentId ? <img src={`/api/photos/${person.photoAttachmentId}`} alt="" /> : <Silhouette gender={person.gender} />}</span><span className="tree-card-copy"><strong>{person.displayName}</strong><span>{person.birthDate ? `Born ${cardDate(person.birthDate)}` : "Birth date unknown"}{location ? ` · ${location}` : ""}</span></span></button>;
+      return <button className={`tree-card ${highlighted.has(person.id) ? "is-highlighted" : ""}`} style={{ left: `${p.x}px`, top: `${p.y}px`, cursor: "pointer" }} key={person.id} data-person-id={person.id} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => { event.stopPropagation(); if (event.button === 0) activate(event.currentTarget); }} onClick={(event) => { if (event.detail === 0) activate(event.currentTarget); }} aria-label={`Open ${person.displayName}`}><span className="tree-card-portrait">{person.photoAttachmentId ? <img src={`/api/photos/${person.photoAttachmentId}`} alt="" /> : <Silhouette gender={person.gender} />}</span><span className="tree-card-copy"><strong>{person.displayName}</strong><span>{person.birthDate ? `Born ${cardDate(person.birthDate)}` : "Birth date unknown"}{location ? ` · ${location}` : ""}</span>{kinship.get(person.id) && <span className="tree-card-kin">{kinship.get(person.id)}</span>}</span></button>;
     })}
     {branchIds.map((id) => {
       const p = positions.get(id)!;
@@ -149,7 +152,10 @@ const FamilyTreeScene = memo(function FamilyTreeScene({ visibleTree, positions, 
   </>;
 });
 
-export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlightedIds, focusPersonId }: { tree: FamilyTree; onSelect: (person: Person) => void; highlightedIds?: string[]; focusPersonId?: string }) {
+export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlightedIds, focusPersonId, meId }: { tree: FamilyTree; onSelect: (person: Person) => void; highlightedIds?: string[]; focusPersonId?: string; meId?: string | null }) {
+  // a line on the canvas says two people are joined, not how; each card
+  // carries the kinship word from the viewer's own seat in the tree
+  const kinship = useMemo(() => kinshipMap(tree, meId), [tree, meId]);
   // The canvas is heavy (hundreds of cards and connector segments); rendering
   // it during the server response repeatedly tripped the Worker CPU limit, so
   // the server sends a light shell and the tree appears on hydration.
@@ -387,6 +393,13 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
     commitView(zoomView(viewRef.current, factor, { x: 0, y: 0 }));
   };
   const point = useCallback((person: Person) => positions.get(person.id) ?? { x: 0, y: 90 }, [positions]);
+  /* The oldest generation sits on row 0, centred: the camera the canvas opens
+   * with, and the one the ⌂ control and the Home key return to after a long
+   * wander down the branches. A card is 15rem wide; on a narrow canvas it
+   * opens far enough out to see more than one of them. */
+  const topOfTree = useCallback((width = cursorRef.current?.parentElement?.getBoundingClientRect().width ?? 0): CanvasView =>
+    ({ x: width / 2, y: 30, scale: clampScale(Math.min(1, width / 640)) }), []);
+  const goToTop = useCallback(() => { cancelCameraAnimation(); cancelWheelCommit(); commitView(topOfTree()); }, [cancelCameraAnimation, cancelWheelCommit, commitView, topOfTree]);
   const centerOn = useCallback((person: Person, animate = true) => {
     const rect = cursorRef.current?.parentElement?.getBoundingClientRect();
     if (!rect) return;
@@ -488,13 +501,11 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
       const width = cursorRef.current?.parentElement?.getBoundingClientRect().width ?? 0;
       if (!width || width !== last) { last = width; raf = requestAnimationFrame(attempt); return; }
       centered.current = true;
-      // a card is 15rem wide; on a narrow canvas open far enough out to see
-      // more than one of them
-      commitView({ x: width / 2, y: 30, scale: clampScale(Math.min(1, width / 640)) });
+      commitView(topOfTree(width));
     };
     attempt();
     return () => cancelAnimationFrame(raf);
-  }, [ready, commitView]);
+  }, [ready, commitView, topOfTree]);
   const positionCursor = (event: React.PointerEvent<HTMLDivElement>) => {
     const cursor = cursorRef.current;
     if (!cursor || event.pointerType === "touch") return;
@@ -564,22 +575,24 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
     } else if (event.key === "+" || event.key === "=") commitView({ ...current, scale: Math.min(3, current.scale * 1.1) });
     else if (event.key === "-" || event.key === "_") commitView({ ...current, scale: Math.max(.5, current.scale * .9) });
     else if (event.key === "0") commitView({ x: 0, y: 0, scale: 1 });
+    else if (event.key === "Home") { event.preventDefault(); goToTop(); }
   };
   if (!ready) {
     return <div className="family-canvas" role="application" aria-label="Interactive family tree" aria-busy="true" data-interactive="false">
       <div className="canvas-hit-surface" aria-hidden="true" />
     </div>;
   }
-  return <div className="family-canvas" role="application" aria-label="Interactive family tree. Use arrow keys to pan, plus or minus to zoom, and 0 to reset." tabIndex={0} data-custom-cursor="true" data-interactive="true" data-panning={isPanning ? "true" : "false"} style={{ cursor: isPanning ? "grabbing" : "grab" }} onKeyDown={keyDown} onPointerEnter={positionCursor} onPointerLeave={hideCursor} onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end} onWheel={wheel}>
+  return <div className="family-canvas" role="application" aria-label="Interactive family tree. Use arrow keys to pan, plus or minus to zoom, 0 to reset, and Home for the top of the tree." tabIndex={0} data-custom-cursor="true" data-interactive="true" data-panning={isPanning ? "true" : "false"} style={{ cursor: isPanning ? "grabbing" : "grab" }} onKeyDown={keyDown} onPointerEnter={positionCursor} onPointerLeave={hideCursor} onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end} onWheel={wheel}>
     <div className="canvas-hit-surface" aria-hidden="true" style={{ cursor: isPanning ? "grabbing" : "grab" }} />
     <div className="canvas-legend" aria-hidden="true"><i className="legend-swatch legend-parent" /> parent <i className="legend-swatch legend-marriage" /> marriage</div>
     <div className="canvas-controls" role="group" aria-label="Canvas zoom controls">
       <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => zoomBy(0.9)} aria-label="Zoom out" title="Zoom out">−</button>
       <button ref={zoomLevelRef} type="button" className="canvas-zoom-level" onPointerDown={(event) => event.stopPropagation()} onClick={() => commitView({ x: 0, y: 0, scale: 1 })} aria-label="Reset zoom to 100 percent" title="Reset zoom">{Math.round(committedView.scale * 100)}%</button>
       <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => zoomBy(1.1)} aria-label="Zoom in" title="Zoom in">＋</button>
+      <button type="button" className="canvas-top" onPointerDown={(event) => event.stopPropagation()} onClick={goToTop} aria-label="Go to the top of the tree" title="Top of the tree (Home)">⌂</button>
     </div>
     <div ref={viewportRef} className="tree-viewport" style={{ transform: `translate(${committedView.x}px, ${committedView.y}px) scale(${committedView.scale})`, "--tree-scale": String(committedView.scale) } as React.CSSProperties}>
-      <FamilyTreeScene visibleTree={visibleTree} positions={positions} spouseLines={spouseLines} hooks={hooks} highlighted={highlighted} branchIds={branchIds} collapsed={collapsed} hiddenCounts={hiddenCounts} onSelect={onSelect} onOpenBranch={openBranch} onToggleBranch={toggleBranch} />
+      <FamilyTreeScene visibleTree={visibleTree} positions={positions} spouseLines={spouseLines} hooks={hooks} highlighted={highlighted} branchIds={branchIds} collapsed={collapsed} hiddenCounts={hiddenCounts} kinship={kinship} onSelect={onSelect} onOpenBranch={openBranch} onToggleBranch={toggleBranch} />
     </div>
     <CanvasCursor mode={cursorMode} cursorRef={cursorRef} />
   </div>;

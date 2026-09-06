@@ -171,3 +171,26 @@ export function relationshipSentence(result: RelationshipResult): string {
     : "";
   return `${result.to.displayName} is ${result.from.displayName}'s ${result.relationship}.${shared}`;
 }
+
+/** The two-word version for a card or a list row: "your father", "your
+ * great-aunt", "your second cousin". Marriage links keep their bridge person
+ * because "related by marriage" alone is the very ambiguity the tag exists
+ * to remove. Null when the records hold no chain at all. */
+export function shortKinship(result: RelationshipResult | null): string | null {
+  if (!result || result.relationship === "not connected in the records") return null;
+  if (result.relationship === "the same person") return "you";
+  return `your ${result.relationship}`;
+}
+
+/** Every person's kinship to one viewer, computed once per tree so a canvas
+ * of hundreds of cards can label each one without a search apiece. */
+export function kinshipMap(tree: FamilyTree, meId: string | null | undefined): Map<string, string> {
+  const labels = new Map<string, string>();
+  if (!meId || !tree.people.some((person) => person.id === meId)) return labels;
+  const describe = createRelationshipDescriber(tree);
+  for (const person of tree.people) {
+    const label = shortKinship(describe(meId, person.id));
+    if (label) labels.set(person.id, label);
+  }
+  return labels;
+}

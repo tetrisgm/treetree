@@ -1,4 +1,5 @@
 import type { FamilyTree, Person } from "./types";
+import { canonicalCity } from "./places";
 import { familyGenerations, lifeStatus, type Generations } from "./life-status";
 
 /** Something the archive can say without being asked: an anniversary falling
@@ -131,7 +132,7 @@ export function familyFactoids(tree: FamilyTree, today = new Date()): FamilyFact
 
   const places = new Map<string, number>();
   for (const person of tree.people) {
-    for (const city of [person.birthCity, person.deathCity]) {
+    for (const city of [canonicalCity(person.birthCity), canonicalCity(person.deathCity)]) {
       if (city) places.set(city, (places.get(city) ?? 0) + 1);
     }
   }

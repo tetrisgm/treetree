@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createRelationshipDescriber, describeRelationship, relationshipSentence } from "../lib/relationship-path";
+import { createRelationshipDescriber, describeRelationship, kinshipMap, relationshipSentence, shortKinship } from "../lib/relationship-path";
 import type { FamilyTree, Person } from "../lib/types";
 
 const person = (id: string, displayName: string, gender: Person["gender"] = null): Person => ({
@@ -69,5 +69,23 @@ describe("relationship paths", () => {
     expect(describe("me", "cous")?.relationship).toBe("first cousin");
     expect(describe("me", "wife")?.relationship).toBe("wife");
     expect(describe("me", "stranger")?.relationship).toBe("not connected in the records");
+  });
+});
+
+describe("kinship tags", () => {
+  it("labels every person from the viewer's seat", () => {
+    const tags = kinshipMap(tree, "me");
+    expect(tags.get("f")).toBe("your father");
+    expect(tags.get("u")).toBe("your uncle");
+    expect(tags.get("gf")).toBe("your grandfather");
+    expect(tags.get("cous")).toBe("your first cousin");
+    expect(tags.get("wife")).toBe("your wife");
+    expect(tags.get("me")).toBe("you");
+    expect(tags.has("stranger")).toBe(false);
+  });
+  it("labels nobody when the viewer has not said who they are", () => {
+    expect(kinshipMap(tree, null).size).toBe(0);
+    expect(kinshipMap(tree, "nobody").size).toBe(0);
+    expect(shortKinship(null)).toBeNull();
   });
 });

@@ -13,6 +13,7 @@
  * and action callbacks. Kept framework-free so it is unit-testable.
  */
 
+import { placeLabel } from "./places";
 import type { FamilyTree, Person } from "./types";
 import { describeRelationship, relationshipSentence } from "./relationship-path";
 import { familyInYear, familyOrigins, kinshipToEgo, lifeStory, namesakes, upcomingDates } from "./family-answers";
@@ -120,8 +121,8 @@ export const WEBMCP_TOOLS: WebMcpTool[] = [
       const { parents, children, spouses } = relativesOf(tree, person.id);
       const stories = tree.stories.filter((story) => story.personIds.includes(person.id));
       const lines = [`${person.displayName}${lifespan(person)}`];
-      if (person.birthDate || person.birthCity || person.birthCountry || person.birthPlace) lines.push(`Born: ${[person.birthDate, person.birthCity ?? person.birthPlace, person.birthCountry].filter(Boolean).join(", ")}`);
-      if (person.deathDate || person.deathCity || person.deathCountry || person.deathPlace) lines.push(`Died: ${[person.deathDate, person.deathCity ?? person.deathPlace, person.deathCountry].filter(Boolean).join(", ")}`);
+      if (person.birthDate || person.birthCity || person.birthCountry || person.birthPlace) lines.push(`Born: ${[person.birthDate, placeLabel(person.birthCity, person.birthCountry, person.birthPlace)].filter(Boolean).join(", ")}`);
+      if (person.deathDate || person.deathCity || person.deathCountry || person.deathPlace) lines.push(`Died: ${[person.deathDate, placeLabel(person.deathCity, person.deathCountry, person.deathPlace)].filter(Boolean).join(", ")}`);
       if (person.residence) lines.push(`Lives in: ${person.residence}`);
       if (person.biography) lines.push(`Biography: ${person.biography}`);
       if (parents.length) lines.push(`Parents: ${parents.map(brief).join("; ")}`);
