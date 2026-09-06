@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { buildTimeline, mapFamilyPlaces, type MappedPlace } from "../../lib/archive-views";
 import { buildFamilyStats } from "../../lib/family-stats";
 import { onThisDay } from "../../lib/family-facts";
@@ -16,7 +16,9 @@ function prettyDate(value: string) {
 
 export function TimelineView({ tree, onSelect, meId }: { tree: FamilyTree; onSelect: (person: Person) => void; meId?: string | null }) {
   const { t } = useLanguage();
-  const events = buildTimeline(tree);
+  // a whole-tree pass, and it now places the undated from their relatives:
+  // not something to redo on every render of a scrolling list
+  const events = useMemo(() => buildTimeline(tree), [tree]);
   // a long list of strangers opens where the reader stands in it
   const scrollHere = useScrollIntoView(meId);
   return <section className="archive-view archive-timeline" aria-label="Family timeline">
@@ -31,7 +33,7 @@ export function TimelineView({ tree, onSelect, meId }: { tree: FamilyTree; onSel
 
 export function WorldMapView({ tree, onSelectPlace, onPreviewPlace }: { tree: FamilyTree; onSelectPlace: (place: MappedPlace) => void; onPreviewPlace?: (place: MappedPlace | null) => void }) {
   const { t } = useLanguage();
-  const { mapped, unmapped } = mapFamilyPlaces(tree);
+  const { mapped, unmapped } = useMemo(() => mapFamilyPlaces(tree), [tree]);
   // The board's own width, untransformed, so screen distances can be worked
   // out from the percentages the places are placed at.
   const [boardWidth, setBoardWidth] = useState(0);
@@ -155,7 +157,7 @@ export function WorldMapView({ tree, onSelectPlace, onPreviewPlace }: { tree: Fa
  * computed from the records as they stand. */
 export function StatisticsView({ tree, onSelect }: { tree: FamilyTree; onSelect: (person: Person) => void }) {
   const { t } = useLanguage();
-  const stats = buildFamilyStats(tree);
+  const stats = useMemo(() => buildFamilyStats(tree), [tree]);
   const pct = (count: number) => stats.people ? Math.round((count / stats.people) * 100) : 0;
   const peak = Math.max(1, ...stats.births.map((entry) => entry.count));
   const bars = (rows: { label: string; count: number }[]) => {
