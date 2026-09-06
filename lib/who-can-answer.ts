@@ -50,7 +50,7 @@ export function answerableGaps(tree: FamilyTree, seatedIds: string[] = [], today
   const generations = familyGenerations(tree, today);
   const neighbours = neighbourMap(tree);
   const byId = new Map(tree.people.map((person) => [person.id, person]));
-  const living = tree.people.filter((person) => isLiving(person, generations, today));
+  const livingIds = new Set(tree.people.filter((person) => isLiving(person, generations, today)).map((person) => person.id));
   const seated = new Set(seatedIds);
   const gaps: Gap[] = [];
   for (const person of tree.people) {
@@ -70,7 +70,7 @@ export function answerableGaps(tree: FamilyTree, seatedIds: string[] = [], today
         seen.add(neighbourId);
         next.push(neighbourId);
         const candidate = byId.get(neighbourId);
-        if (candidate && living.some((alive) => alive.id === candidate.id)) couldKnow.push(candidate);
+        if (candidate && livingIds.has(candidate.id)) couldKnow.push(candidate);
       }
       frontier = next;
     }
@@ -87,9 +87,10 @@ export function answerableGaps(tree: FamilyTree, seatedIds: string[] = [], today
 
 /** The questions to put to one member, phrased for a person, not a database.
  * `seatId` is the person that member says they are. */
-export function questionsForMember(tree: FamilyTree, seatId: string | null, limit = 3, today = new Date()): { personId: string; question: string }[] {
+/** `precomputed` lets a caller with many members walk the graph once. */
+export function questionsForMember(tree: FamilyTree, seatId: string | null, limit = 3, today = new Date(), precomputed?: Gap[]): { personId: string; question: string }[] {
   if (!seatId) return [];
-  const gaps = answerableGaps(tree, [seatId], today);
+  const gaps = precomputed ?? answerableGaps(tree, [seatId], today);
   const mine = gaps.filter((gap) => gap.couldKnow.some((person) => person.id === seatId));
   /* Few records sit one step from any one member, so a letter that only asks
      about those usually asks nothing. Widen to the family around them - the

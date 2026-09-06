@@ -25,6 +25,19 @@ async function ready(page: Page, path = "/") {
 async function openView(page: Page, name: string) {
   await page.getByRole("button", { name, exact: true }).click();
   await page.waitForTimeout(600);
+  /* The pedigree centres itself once, 30-1300ms after its lazily-fetched
+     chunk mounts, so a fixed wait samples a board that is still arriving and
+     the next assertion races it. Wait for the transform to hold still. */
+  const pan = page.locator(".ped-pan");
+  if (await pan.count()) {
+    let last: string | null = null;
+    for (let attempt = 0; attempt < 40; attempt += 1) {
+      const now = await pan.getAttribute("style");
+      if (now && now === last) return;
+      last = now;
+      await page.waitForTimeout(100);
+    }
+  }
 }
 
 test.beforeEach(async ({ context, baseURL }) => {

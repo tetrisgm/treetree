@@ -56,3 +56,13 @@ describe("the places a form offers", () => {
     expect(countries).toContain("Iran");
   });
 });
+
+describe("places that are only whitespace", () => {
+  it("does not take the map down", async () => {
+    const { sameCity } = await import("../lib/places");
+    const tree: FamilyTree = { people: [person("a", { birthCity: "   ", birthCountry: " ", birthDate: "1900" })], relationships: [], stories: [] };
+    expect(() => mapFamilyPlaces(tree)).not.toThrow();
+    expect(mapFamilyPlaces(tree).mapped).toEqual([]);
+    expect(sameCity("   ", "Qazvin")).toBe(false);
+  });
+});

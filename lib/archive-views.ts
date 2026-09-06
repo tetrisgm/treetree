@@ -93,8 +93,9 @@ export function mapFamilyPlaces(tree: FamilyTree): { mapped: MappedPlace[]; unma
     for (const location of locations) {
       const label = place(location.city, location.country, location.fallback);
       if (!label) continue;
-      const coordinates = location.city ? cityLatLon[placeKey(canonicalCity(location.city)!)] : undefined;
-      const fallbackCoordinates = location.country ? countryLatLon[placeKey(canonicalCountry(location.country)!)] : undefined;
+      const city = canonicalCity(location.city), country = canonicalCountry(location.country);
+      const coordinates = city ? cityLatLon[placeKey(city)] : undefined;
+      const fallbackCoordinates = country ? countryLatLon[placeKey(country)] : undefined;
       const latLon = coordinates || fallbackCoordinates;
       const point = latLon ? toPercent(latLon) : undefined;
       if (!point) { unmapped.add(label); continue; }

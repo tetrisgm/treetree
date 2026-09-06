@@ -30,6 +30,18 @@ export type ResponsesLikeResponse = { output: ResponsesLikeOutput[]; output_text
 
 type Block = Record<string, unknown>;
 
+/** base64 -> UTF-8, or null when the bytes are not text after all */
+function decodeBase64(data: string): string | null {
+  try {
+    const binary = atob(data);
+    const bytes = Uint8Array.from(binary, (character) => character.charCodeAt(0));
+    const text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+    return text.length > 400_000 ? `${text.slice(0, 400_000)}\n…(truncated)` : text;
+  } catch {
+    return null;
+  }
+}
+
 const dataUrlParts = (value: string) => {
   const match = /^data:([^;,]+);base64,([\s\S]*)$/.exec(value);
   return match ? { mediaType: match[1], data: match[2] } : null;
@@ -46,10 +58,16 @@ function contentBlock(part: Record<string, unknown>): Block | null {
   }
   if (part.type === "input_file") {
     const parts = dataUrlParts(String(part.file_data ?? ""));
-    // Anthropic reads PDFs as documents; anything else arrives as its text
-    if (parts?.mediaType === "application/pdf") return { type: "document", source: { type: "base64", media_type: parts.mediaType, data: parts.data } };
-    if (parts) return { type: "text", text: `Attached file ${String(part.filename ?? "")} (${parts.mediaType}); its contents could not be read directly.` };
-    return null;
+    if (!parts) return null;
+    // PDFs go as documents; anything whose bytes are text goes as its text,
+    // because the archivist's job is to read what the family sent
+    if (parts.mediaType === "application/pdf") return { type: "document", source: { type: "base64", media_type: parts.mediaType, data: parts.data } };
+    const filename = String(part.filename ?? "");
+    if (/^text\/|\b(json|xml|csv|markdown|html)\b/.test(parts.mediaType)) {
+      const text = decodeBase64(parts.data);
+      if (text !== null) return { type: "text", text: `Contents of ${filename}:\n\n${text}` };
+    }
+    return { type: "text", text: `Attached file ${filename} (${parts.mediaType}); its format cannot be read directly.` };
   }
   return null;
 }
@@ -97,21 +115,30 @@ export function fromMessagesResponse(body: { content?: unknown[] }): ResponsesLi
 export function anthropicResponsesClient(apiKey: string, model: string) {
   return {
     responses: {
-      create: async (request: ResponsesRequest, options?: { timeout?: number }): Promise<ResponsesLikeResponse> => {
-        const controller = new AbortController();
-        const timer = options?.timeout ? setTimeout(() => controller.abort(), options.timeout) : null;
-        try {
-          const response = await fetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": ANTHROPIC_VERSION },
-            body: JSON.stringify(toMessagesRequest(request, model)),
-            signal: controller.signal,
-          });
-          if (!response.ok) throw new Error(`anthropic_${response.status}`);
-          return fromMessagesResponse(await response.json() as { content?: unknown[] });
-        } finally {
-          if (timer) clearTimeout(timer);
+      create: async (request: ResponsesRequest, options?: { timeout?: number; maxRetries?: number }): Promise<ResponsesLikeResponse> => {
+        // the callers pass maxRetries expecting the OpenAI client's behaviour;
+        // honour it here or the public archivist quietly loses its one retry
+        const attempts = Math.max(1, (options?.maxRetries ?? 0) + 1);
+        let lastError: unknown = new Error("anthropic_no_attempt");
+        for (let attempt = 0; attempt < attempts; attempt += 1) {
+          const controller = new AbortController();
+          const timer = options?.timeout ? setTimeout(() => controller.abort(), options.timeout) : null;
+          try {
+            const response = await fetch("https://api.anthropic.com/v1/messages", {
+              method: "POST",
+              headers: { "content-type": "application/json", "x-api-key": apiKey, "anthropic-version": ANTHROPIC_VERSION },
+              body: JSON.stringify(toMessagesRequest(request, model)),
+              signal: controller.signal,
+            });
+            if (!response.ok) throw new Error(`anthropic_${response.status}`);
+            return fromMessagesResponse(await response.json() as { content?: unknown[] });
+          } catch (error) {
+            lastError = error;
+          } finally {
+            if (timer) clearTimeout(timer);
+          }
         }
+        throw lastError;
       },
     },
   };

@@ -97,5 +97,7 @@ export function knownPlaces(people: { birthCity?: string | null; birthCountry?: 
 }
 
 /** Do two spellings name the same city? */
-export const sameCity = (a: string | null | undefined, b: string | null | undefined) =>
-  Boolean(a && b) && placeKey(canonicalCity(a)!) === placeKey(canonicalCity(b)!);
+export const sameCity = (a: string | null | undefined, b: string | null | undefined) => {
+  const left = canonicalCity(a), right = canonicalCity(b);
+  return Boolean(left && right) && placeKey(left as string) === placeKey(right as string);
+};

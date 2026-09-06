@@ -30,3 +30,19 @@ describe("estimated birth years", () => {
     expect((estimates.get("gf")?.spread ?? 0)).toBeGreaterThanOrEqual(estimates.get("gm")?.spread ?? 0);
   });
 });
+
+describe("estimates that would be impossible", () => {
+  it("never places a birth after the person's own recorded death, or after today", () => {
+    // a contradictory record: recorded dead in 1900, with a child recorded born 1990
+    const tree: FamilyTree = {
+      people: [person("ancestor", { deathDate: "1900-06-01", gender: "male" }), person("child", { birthDate: "1990" }), person("future"), person("futureChild", { birthDate: "2020" })],
+      relationships: [parent("ancestor", "child"), parent("future", "futureChild")],
+      stories: [],
+    };
+    const estimates = estimateBirthYears(tree, new Date("2026-09-06T00:00:00Z"));
+    expect(estimates.has("ancestor")).toBe(false);
+    // a child born 2020 would put their own child at 2048; that is not a fact
+    expect(estimates.has("future")).toBe(true);
+    expect(estimates.get("future")!.year).toBeLessThanOrEqual(2026);
+  });
+});

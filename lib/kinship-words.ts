@@ -17,6 +17,23 @@ function words(result: RelationshipResult): Word | null {
     if (result.relationship === "husband") return { fa: "شوهر", fr: "mari" };
     if (result.relationship === "wife") return { fa: "زن", fr: "femme" };
     if (result.relationship === "spouse") return { fa: "همسر", fr: "conjoint" };
+    /* Persian names the in-laws by whose family they belong to, so the word
+       depends on the asker's own gender: a woman's father-in-law is پدرشوهر,
+       a man's is پدرزن. */
+    const wifeSide = result.from.gender === "male";
+    const inLaws: Record<string, Word> = {
+      "son-in-law": { fa: "داماد", fr: "gendre" },
+      "daughter-in-law": { fa: "عروس", fr: "belle-fille" },
+      "father-in-law": { fa: wifeSide ? "پدرزن" : "پدرشوهر", fr: "beau-père" },
+      "mother-in-law": { fa: wifeSide ? "مادرزن" : "مادرشوهر", fr: "belle-mère" },
+      "brother-in-law": { fa: wifeSide ? "برادرزن" : "برادرشوهر", fr: "beau-frère" },
+      "sister-in-law": { fa: wifeSide ? "خواهرزن" : "خواهرشوهر", fr: "belle-sœur" },
+      "step-father": { fa: "ناپدری", fr: "beau-père" },
+      "step-mother": { fa: "نامادری", fr: "belle-mère" },
+      "step-son": { fa: "ناپسری", fr: "beau-fils" },
+      "step-daughter": { fa: "نادختری", fr: "belle-fille" },
+    };
+    if (inLaws[result.relationship]) return inLaws[result.relationship];
     return null;
   }
   const male = to.gender === "male", female = to.gender === "female";
@@ -74,6 +91,23 @@ export function kinshipLabel(result: RelationshipResult | null, lang: Lang, voic
     if (lang === "fa") return through ? `خویشاوند سببی از طریق ${through}` : "خویشاوند سببی";
     if (lang === "fr") return through ? `parent par alliance, via ${through}` : "parent par alliance";
     return `${voice} relative by marriage${through ? `, via ${through}` : ""}`;
+  }
+  /* "your uncle's wife" is built from the blood relative, not stored as a
+     word of its own: name them, then say whose husband or wife this is. */
+  if (result.viaSpouseOf) {
+    const head = kinshipLabel(result.viaSpouseOf, lang, voice);
+    const male = result.to.gender === "male", female = result.to.gender === "female";
+    if (head && lang === "fa") return `${female ? "زن" : male ? "شوهر" : "همسر"} ${head}`;
+    if (head && lang === "fr") return `${female ? "la femme" : male ? "le mari" : "le conjoint"} de ${head}`;
+    if (head) return `${head}'s ${female ? "wife" : male ? "husband" : "spouse"}`;
+  }
+  /* "your husband's nephew": the mirror phrase, named from the spouse's side */
+  if (result.viaPartnerOf) {
+    const theirs = kinshipLabel(result.viaPartnerOf, lang, "their");
+    const partner = result.partner?.gender === "male" ? { en: "husband", fa: "شوهر", fr: "mari" } : result.partner?.gender === "female" ? { en: "wife", fa: "زن", fr: "femme" } : { en: "spouse", fa: "همسر", fr: "conjoint" };
+    if (theirs && lang === "fa") return `${theirs.replace(/ (آنها|او|شما)$/, "")} ${partner.fa}${voice === "your" ? " شما" : " او"}`;
+    if (theirs && lang === "fr") return `${theirs.replace(/^(votre|leur|son|sa) /, "le ").replace(/^le /, "")} de ${voice === "your" ? "votre" : "son"} ${partner.fr}`;
+    if (theirs) return `${voice} ${partner.en}'s ${theirs.replace(/^their /, "")}`;
   }
   const word = words(result);
   if (lang === "fa" && word?.fa) {

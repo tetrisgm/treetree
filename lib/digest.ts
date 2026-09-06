@@ -1,4 +1,4 @@
-import { questionsForMember } from "./who-can-answer";
+import { questionsForMember, type Gap } from "./who-can-answer";
 import type { FamilyTree } from "./types";
 import type { ChangeEntry } from "../db/store";
 import { onThisDay } from "./family-facts";
@@ -17,8 +17,8 @@ export type Digest = {
 /** The archive knows what it is missing and who is near enough to know; a
  * digest that asks three such questions is worth more than one that only
  * reports. `seatId` is the person the recipient says they are. */
-export function digestQuestions(tree: FamilyTree, seatId: string | null, today = new Date()): string[] {
-  return questionsForMember(tree, seatId, 3, today).map((entry) => entry.question);
+export function digestQuestions(tree: FamilyTree, seatId: string | null, precomputed?: Gap[], today = new Date()): string[] {
+  return questionsForMember(tree, seatId, 3, today, precomputed).map((entry) => entry.question);
 }
 
 const KIND_TITLES: Record<string, string> = {
