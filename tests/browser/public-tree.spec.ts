@@ -123,12 +123,15 @@ test("canvas wheel pans the camera without scrolling the document", async ({ pag
 test("canvas zoom buttons scale the viewport", async ({ page }) => {
   await openFullTree(page);
   const scaleOf = () => page.locator(".tree-viewport").evaluate((element) => Number(element.style.transform.match(/scale\(([\d.]+)\)/)?.[1] ?? 1));
-  expect(await scaleOf()).toBeCloseTo(1, 5);
+  // the tree opens a couple of steps back, so the family arrives as a shape
+  const opening = await scaleOf();
+  expect(opening).toBeGreaterThan(0.4);
+  expect(opening).toBeLessThan(1);
   await page.getByRole("button", { name: "Zoom in" }).first().click();
-  await expect.poll(scaleOf).toBeGreaterThan(1.05);
+  await expect.poll(scaleOf).toBeGreaterThan(opening * 1.05);
   await page.getByRole("button", { name: "Zoom out" }).first().click();
   await page.getByRole("button", { name: "Zoom out" }).first().click();
-  await expect.poll(scaleOf).toBeLessThan(1);
+  await expect.poll(scaleOf).toBeLessThan(opening);
 });
 
 test("zoom controls do not show the canvas hand cursor", async ({ page }) => {

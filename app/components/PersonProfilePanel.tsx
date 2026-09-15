@@ -161,6 +161,11 @@ function PersonSources({ personId }: { personId: string }) {
 
 export default function PersonProfilePanel({ person, tree, canEdit, canComment, onClose, onSelect, onTreeChange, preview, meId }: Props) {
   const { t, lang } = useLanguage();
+  /* The panel is its own scroller and it is reused from one person to the
+     next, so without this a reader who had scrolled down to someone's
+     stories opened the next record halfway through it. */
+  const panelRef = useRef<HTMLElement>(null);
+  useEffect(() => { panelRef.current?.scrollTo({ top: 0 }); }, [person.id]);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [relationEditor, setRelationEditor] = useState<string | null>(null);
@@ -234,7 +239,7 @@ export default function PersonProfilePanel({ person, tree, canEdit, canComment, 
   const estimate = useMemo(() => person.birthDate ? null : estimateBirthYears(tree).get(person.id) ?? null, [tree, person.id, person.birthDate]);
   const subtitleRest = [person.birthDate ? (person.deathDate ? `${person.birthDate.slice(0, 4)}–${person.deathDate.slice(0, 4)}` : `b. ${person.birthDate.slice(0, 4)}`) : person.deathDate ? `d. ${person.deathDate.slice(0, 4)}` : "", locationLine(person.birthCity, person.birthCountry, person.birthPlace) ?? ""].filter(Boolean).join(" · ");
   const relation = (other: Person, label: string) => tree.relationships.find((link) => (label === "Spouse" && link.type === "spouse" && ((link.fromPersonId === person.id && link.toPersonId === other.id) || (link.toPersonId === person.id && link.fromPersonId === other.id))) || (label === "Parents" && link.type === "parent" && link.fromPersonId === other.id && link.toPersonId === person.id) || (label === "Children" && link.type === "parent" && link.fromPersonId === person.id && link.toPersonId === other.id));
-  return <section className="person-modal person-modal-v2 person-panel" role="dialog" aria-labelledby="person-modal-title">
+  return <section ref={panelRef} className="person-modal person-modal-v2 person-panel" role="dialog" aria-labelledby="person-modal-title">
     <header className="person-panel-bar">
       <div className="person-nav">
         <button type="button" onClick={() => window.history.back()} aria-label={t("person.previous")} title={t("person.previous")}>‹</button>

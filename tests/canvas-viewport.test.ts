@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centerViewOn, clampScale, openCollapsedPath, panView, toggleCollapsedBranch, zoomView } from "../app/components/FamilyTreeCanvas";
+import { centerViewOn, clampScale, clampToContent, openCollapsedPath, panView, toggleCollapsedBranch, zoomView } from "../app/components/FamilyTreeCanvas";
 
 describe("family canvas viewport math", () => {
   it("keeps zoom within usable bounds", () => {
@@ -57,5 +57,36 @@ describe("family canvas viewport math", () => {
     expect(toggleCollapsedBranch(collapsed, "first")).toEqual(new Set(["second"]));
     expect(toggleCollapsedBranch(collapsed, "third")).toEqual(new Set(["first", "second", "third"]));
     expect(collapsed).toEqual(new Set(["first", "second"]));
+  });
+});
+
+describe("the camera stays where the family is", () => {
+  const content = { minX: -1000, maxX: 1000, minY: 0, maxY: 2000 };
+  const viewport = { width: 800, height: 600 };
+  it("lets a wide tree be panned to either edge and no further", () => {
+    const farLeft = clampToContent({ x: -99999, y: 0, scale: 1 }, content, viewport);
+    // a strip of the tree is still on screen, and no more can be pushed away
+    expect(farLeft.x).toBeCloseTo(160 - 1000, 5);
+    const farRight = clampToContent({ x: 99999, y: 0, scale: 1 }, content, viewport);
+    expect(farRight.x).toBeCloseTo(800 - 160 + 1000, 5);
+    // and a view already inside the bounds is left exactly as it was
+    expect(clampToContent({ x: 120, y: -300, scale: 1 }, content, viewport)).toEqual({ x: 120, y: -300, scale: 1 });
+  });
+  it("still lets a tree smaller than the window be moved, without losing it", () => {
+    const small = { minX: 0, maxX: 200, minY: 0, maxY: 100 };
+    // it may leave, but never entirely: a strip of it stays against the edge
+    expect(clampToContent({ x: -500, y: 0, scale: 1 }, small, viewport).x).toBeCloseTo(-40, 5);
+    expect(clampToContent({ x: 5000, y: 0, scale: 1 }, small, viewport).x).toBeCloseTo(640, 5);
+    // and a modest nudge is left alone, so dragging never feels stuck
+    expect(clampToContent({ x: 40, y: 0, scale: 1 }, small, viewport).x).toBe(40);
+  });
+  it("bounds by what is on screen, so zooming out loosens the leash", () => {
+    const far = clampToContent({ x: -99999, y: 0, scale: 0.5 }, content, viewport);
+    expect(far.x).toBeCloseTo(160 - 500, 5);
+  });
+  it("does nothing until it knows the window or the cards", () => {
+    const view = { x: 7, y: 9, scale: 1 };
+    expect(clampToContent(view, null, viewport)).toBe(view);
+    expect(clampToContent(view, content, { width: 0, height: 0 })).toBe(view);
   });
 });

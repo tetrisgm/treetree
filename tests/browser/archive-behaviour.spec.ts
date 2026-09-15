@@ -178,7 +178,9 @@ test("the map zooms on open ground, not on a city, and names both", async ({ pag
   await page.mouse.dblclick(marker!.x + marker!.width / 2, marker!.y + marker!.height / 2);
   await page.waitForTimeout(700);
   expect(await scale()).toBeCloseTo(before, 3);
-  await expect(page.locator(".place-panel")).toBeVisible();
+  // the hovered marker draws a preview of the same shape, and that copy is
+  // aria-hidden: the pinned panel is the one the accessibility tree keeps
+  await expect(page.getByRole("dialog", { name: /.+/ })).toBeVisible();
 
   const map = await page.locator(".world-map").boundingBox();
   await page.mouse.dblclick(map!.x + 80, map!.y + map!.height - 80);

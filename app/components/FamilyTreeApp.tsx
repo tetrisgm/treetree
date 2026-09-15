@@ -11,7 +11,7 @@ import { useLanguage } from "./LanguageContext";
 import { useWebMcp } from "./useWebMcp";
 import { webMcpAvailable } from "../../lib/webmcp-register";
 import { DemoIntro } from "./DemoIntro";
-import { LANGUAGES, LANGUAGE_FLAGS, LANGUAGE_NAMES } from "../../lib/i18n";
+import { LANGUAGES, LANGUAGE_FLAGS, LANGUAGE_NAMES, type Lang } from "../../lib/i18n";
 import { BUILD_ID, VERSION } from "../../lib/build";
 import { isUsefulArchivePath, selectedFileKey, selectedFilePath } from "../../lib/upload-policy";
 
@@ -57,9 +57,45 @@ function appendSelectedFiles(current: File[], incoming: File[], fromFolder = fal
 }
 
 const EMPTY_TREE: FamilyTree = { people: [], relationships: [], stories: [] };
-const VIEW_MODES = ["tree", "family", "list", "timeline", "calendar", "map", "stats", "fill"] as const;
+const VIEW_MODES = ["family", "tree", "list", "timeline", "calendar", "map", "stats", "fill"] as const;
 type ViewMode = (typeof VIEW_MODES)[number];
 const VIEW_KEYS: Record<ViewMode, string> = { tree: "view.tree", family: "view.family", list: "view.list", timeline: "view.timeline", calendar: "view.calendar", map: "view.map", stats: "view.stats", fill: "view.fill" };
+
+/** One control for three languages.
+ *
+ * Three flags side by side read as three buttons of equal weight, and two of
+ * them are always the wrong one. This shows the language in use and opens the
+ * others on demand - closing on Escape, on a click outside, and on choosing.
+ */
+function LanguagePicker({ lang, setLang, label }: { lang: Lang; setLang: (next: Lang) => void; label: string }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (event: MouseEvent) => { if (!box.current?.contains(event.target as Node)) setOpen(false); };
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("pointerdown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => { window.removeEventListener("pointerdown", onDown); window.removeEventListener("keydown", onKey); };
+  }, [open]);
+  return <div className="lang-switch" ref={box}>
+    <button type="button" className="lang-current" aria-haspopup="menu" aria-expanded={open}
+      aria-label={`${label}: ${LANGUAGE_NAMES[lang]}`} title={`${label}: ${LANGUAGE_NAMES[lang]}`}
+      onClick={() => setOpen((current) => !current)}>
+      <span aria-hidden="true">{LANGUAGE_FLAGS[lang]}</span>
+      <span className="lang-current-name">{LANGUAGE_NAMES[lang]}</span>
+      <span className="lang-caret" aria-hidden="true">▾</span>
+    </button>
+    {open && <div className="lang-menu" role="menu" aria-label={label}>
+      {LANGUAGES.map((code) => <button type="button" key={code} lang={code} role="menuitemradio" aria-checked={lang === code}
+        className={`lang-pick ${lang === code ? "is-active" : ""}`}
+        onClick={() => { setOpen(false); if (code !== lang) setLang(code); }}>
+        <span aria-hidden="true">{LANGUAGE_FLAGS[code]}</span>
+        <span className="lang-pick-name">{LANGUAGE_NAMES[code]}</span>
+      </button>)}
+    </div>}
+  </div>;
+}
 
 export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signInEnabled, webMcpDemo }: Props) {
   const { t, lang, setLang } = useLanguage();
@@ -201,7 +237,8 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
   const [placeFocus, setPlaceFocus] = useState<MappedPlace | null>(null);
   // The profile panel takes exactly this width, so the two are one column and
   // no view is ever half-hidden behind a panel.
-  const [chatWidth, setChatWidth] = useState(480);
+  // 14% narrower than it was: the tree is what people came for
+  const [chatWidth, setChatWidth] = useState(413);
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       try {
@@ -215,7 +252,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
     event.preventDefault();
     const startX = event.clientX;
     const startWidth = chatWidth;
-    const clampWidth = (value: number) => Math.min(620, Math.max(420, value));
+    const clampWidth = (value: number) => Math.min(620, Math.max(360, value));
     // a fast resize drag sweeps across the chat text; suspend selection until release
     document.body.style.userSelect = "none";
     const onMove = (move: PointerEvent) => setChatWidth(clampWidth(startWidth + move.clientX - startX));
@@ -228,21 +265,13 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   };
+  /* Every visit opens the same way: the tree, at the top of the tree.
+     Restoring the last tab and the last camera meant a reader who came back
+     landed somewhere they had no memory of choosing, with no way to tell
+     where in the family they were - and the shared links two people opened
+     side by side showed them different things. Arriving in a known place is
+     worth more than resuming an unremembered one. */
   const [viewMode, setViewModeState] = useState<ViewMode>("tree");
-  // The restore runs again once the viewer resolves, which is after the page
-  // is interactive - so without this it could put the reader back on the view
-  // they had last time, seconds after they clicked a different tab.
-  const viewChosen = useRef(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      if (viewChosen.current) return;
-      try {
-        const saved = window.localStorage.getItem("archive-view");
-        if (saved && (VIEW_MODES as readonly string[]).includes(saved) && !(saved === "fill" && !viewer.canEdit)) setViewModeState(saved as ViewMode);
-      } catch { /* private mode */ }
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [viewer.canEdit]);
   /* Documents the family sent are read one request at a time, and this is
      what makes the requests: an editor arriving drains whatever is waiting.
      There is no timer anywhere - a standing job is the owner's decision, not
@@ -281,14 +310,12 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
   }, [viewer.canEdit]);
 
   const setViewMode = (mode: ViewMode) => {
-    viewChosen.current = true;
     setViewModeState(mode);
     // Compact width - a phone, or an iPad in Slide Over - is one column: the
     // chat fills it, so choosing a view has to get the chat out of the way or
     // the tab appears to do nothing at all. An iPad has room for both.
     if (typeof window !== "undefined" && window.innerWidth <= 743) setChatCollapsed(true);
     if (mode !== "map") setPlaceFocus(null);
-    try { window.localStorage.setItem("archive-view", mode); } catch { /* private mode */ }
   };
   // A browser-side agent (Chrome/Edge WebMCP) driving this page gets the
   // archive's tools with no token - it acts as the member already signed in
@@ -423,16 +450,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
         </label>
         <nav className="archive-view-switcher" aria-label="Archive view">{VIEW_MODES.filter((mode) => mode !== "fill" || viewer.canEdit).map((mode) => <button type="button" className={viewMode === mode ? "is-active" : ""} aria-current={viewMode === mode ? "page" : undefined} onClick={() => setViewMode(mode)} key={mode}>{t(VIEW_KEYS[mode])}</button>)}</nav>
         <div className="relative flex items-center gap-4">
-          <div className="lang-switch" role="group" aria-label={t("settings.language")}>
-            <span className="lang-switch-label">{t("settings.language")}</span>
-            {LANGUAGES.map((code) => <button type="button" key={code} lang={code}
-              className={`lang-pick ${lang === code ? "is-active" : ""}`}
-              aria-pressed={lang === code} title={LANGUAGE_NAMES[code]}
-              onClick={() => setLang(code)}>
-              <span aria-hidden="true">{LANGUAGE_FLAGS[code]}</span>
-              <span className="lang-pick-name">{LANGUAGE_NAMES[code]}</span>
-            </button>)}
-          </div>
+          <LanguagePicker lang={lang} setLang={setLang} label={t("settings.language")} />
           <TreeSearch tree={tree} onPick={(person) => openPerson(person)} />
           {signInEnabled && !viewer.signedIn && <a className="rounded-full bg-[var(--accent-fill)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3a604a]" href="/settings">{t("nav.signIn")}</a>}
           {viewer.signedIn && <><button className="account-menu-button" aria-label={t("nav.account")} onClick={() => setMenuOpen(!menuOpen)}>···</button>{menuOpen && <div className="absolute right-0 top-10 z-50 rounded-xl border border-[var(--line)] bg-[var(--card)] p-1 shadow-lg"><a className="block rounded-lg px-4 py-2 text-sm hover:bg-[var(--wash)]" href="/settings">{t("nav.settings")}</a><a className="block rounded-lg px-4 py-2 text-sm hover:bg-[var(--wash)]" href={signOutPath}>{t("nav.signOut")}</a></div>}</>}
