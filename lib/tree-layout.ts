@@ -86,6 +86,9 @@ export interface FamilyLayout {
   anchorX: number;
   /** child id -> the parent under whose family block the child is drawn */
   primaryParent: Map<string, string>;
+  /** spouse id -> the partner they are drawn beside, for those who join a
+   *  partner's couple row rather than standing in their own family block */
+  drawnBeside: Map<string, string>;
 }
 
 /**
@@ -322,7 +325,11 @@ export function buildFamilyLayout(tree: FamilyTree): FamilyLayout {
       cursor += 1.5;
     }
   }
-  return { positions, width: Math.max(cursor, 1), anchorX: anchorX ?? Math.max(cursor, 1) / 2, primaryParent };
+  // resolved to the person actually drawn next to, so a chain of marriages
+  // reports the row's owner rather than the next link along
+  const drawnBeside = new Map<string, string>();
+  for (const [attached] of attachedTo) drawnBeside.set(attached, attachRoot(attached));
+  return { positions, width: Math.max(cursor, 1), anchorX: anchorX ?? Math.max(cursor, 1) / 2, primaryParent, drawnBeside };
 }
 
 export interface RelationMaps {
@@ -367,4 +374,75 @@ export function hiddenRelativeCount(personId: string, maps: RelationMaps, visibl
     for (const id of maps.childrenOf.get(parentId) ?? []) consider(id);
   }
   return behind.size;
+}
+
+
+/** What a folded branch hides, and how much it is hiding.
+ *
+ * The canvas folds deep branches so the tree opens at a readable width, and
+ * this decides who that leaves on screen. It is the tree's own rule about
+ * who belongs where, so it lives beside the layout that made that decision
+ * rather than inside the component that draws it.
+ */
+export function foldBranches(
+  tree: FamilyTree,
+  layout: FamilyLayout | null,
+  primaryChildren: Map<string, string[]>,
+  collapsed: Set<string>,
+): { visibleTree: FamilyTree; hiddenCounts: Map<string, number>; visibleSet: Set<string> } {
+  if (!layout || collapsed.size === 0) {
+    return { visibleTree: tree, hiddenCounts: new Map(), visibleSet: new Set(tree.people.map((person) => person.id)) };
+  }
+  const parentless = new Set(tree.people.map((person) => person.id));
+  for (const link of tree.relationships) if (link.type === "parent") parentless.delete(link.toPersonId);
+  const spousesOf = new Map<string, string[]>();
+  for (const link of tree.relationships) {
+    if (link.type !== "spouse") continue;
+    appendMapValue(spousesOf, link.fromPersonId, link.toPersonId);
+    appendMapValue(spousesOf, link.toPersonId, link.fromPersonId);
+  }
+  const hidden = new Set<string>();
+  const hideDescendants = (id: string) => {
+    for (const child of primaryChildren.get(id) ?? []) {
+      if (hidden.has(child)) continue;
+      hidden.add(child);
+      hideDescendants(child);
+    }
+  };
+  for (const id of collapsed) hideDescendants(id);
+  /* A spouse the layout draws beside their partner sits in that couple's row,
+     not in the branch they were born into, so their visibility is their
+     partner's. Without this a wife whose own parents happen to be recorded
+     stayed hidden next to a visible husband - while a wife with no recorded
+     parents appeared - because she was still a descendant of her own folded
+     branch. */
+  for (const [spouse, partner] of layout.drawnBeside) {
+    if (hidden.has(partner)) hidden.add(spouse);
+    else hidden.delete(spouse);
+  }
+  // someone who married in and stands in nobody's row goes when the last
+  // partner who could anchor them goes
+  for (const [id, partners] of spousesOf) {
+    if (!layout.drawnBeside.has(id) && parentless.has(id) && partners.every((partner) => hidden.has(partner))) hidden.add(id);
+  }
+  const hiddenCounts = new Map<string, number>();
+  const countBranch = (id: string): number => {
+    const cached = hiddenCounts.get(id);
+    if (cached !== undefined) return cached;
+    let count = 0;
+    for (const child of primaryChildren.get(id) ?? []) {
+      count += 1 + countBranch(child);
+      for (const spouse of spousesOf.get(child) ?? []) if (layout.drawnBeside.get(spouse) === child) count += 1;
+    }
+    hiddenCounts.set(id, count);
+    return count;
+  };
+  for (const parent of primaryChildren.keys()) countBranch(parent);
+  const visibleSet = new Set(tree.people.filter((person) => !hidden.has(person.id)).map((person) => person.id));
+  const visibleTree: FamilyTree = hidden.size === 0 ? tree : {
+    people: tree.people.filter((person) => visibleSet.has(person.id)),
+    relationships: tree.relationships.filter((link) => visibleSet.has(link.fromPersonId) && visibleSet.has(link.toPersonId)),
+    stories: tree.stories,
+  };
+  return { visibleTree, hiddenCounts, visibleSet };
 }

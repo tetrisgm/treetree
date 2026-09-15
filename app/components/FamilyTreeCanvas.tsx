@@ -7,10 +7,17 @@ import { useLanguage } from "./LanguageContext";
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { MutableRefObject } from "react";
 import type { FamilyTree, Person } from "../../lib/types";
-import { buildFamilyLayout } from "../../lib/tree-layout";
+import { buildFamilyLayout, foldBranches } from "../../lib/tree-layout";
 import { Silhouette } from "./TreePrimitives";
 
 const cardDateFormat = new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" });
+// a card is 15rem across; the height is the tallest a two-line card gets
+const CARD_WIDTH = 240, CARD_HEIGHT = 120;
+/** How far a pointer must travel before it is a drag and not a click.
+ *  Measured as a radius, and generous: a hand resting on a trackpad wanders
+ *  two or three pixels in each direction while clicking, and a deliberate
+ *  drag is always far longer than this. */
+const DRAG_THRESHOLD = 8;
 const noHighlightedIds: string[] = [];
 function rememberHeldCard(ref: MutableRefObject<{ id: string; at: DOMRect } | null>, value: { id: string; at: DOMRect }) {
   ref.current = value;
@@ -37,6 +44,41 @@ export function zoomView(view: CanvasView, factor: number, cursor: { x: number; 
 
 export function panView(view: CanvasView, delta: { x: number; y: number }): CanvasView {
   return { ...view, x: view.x + delta.x, y: view.y + delta.y };
+}
+
+/** the rectangle the cards occupy, in unscaled content pixels */
+export type ContentBounds = { minX: number; maxX: number; minY: number; maxY: number };
+
+/** Keep the tree in sight.
+ *
+ * A canvas that pans forever lets a reader drag the family off the screen
+ * and lose it in blank space, with nothing to steer back by. The camera
+ * therefore stops where the cards stop: a tree wider than the window can be
+ * pushed until its far edge reaches the near edge, no further, and a tree
+ * that fits entirely stays entirely inside the window.
+ */
+export function clampToContent(
+  view: CanvasView,
+  content: ContentBounds | null,
+  viewport: { width: number; height: number },
+  margin = 160,
+): CanvasView {
+  if (!content || !viewport.width || !viewport.height) return view;
+  const axis = (value: number, min: number, max: number, extent: number) => {
+    const start = min * view.scale;
+    const end = max * view.scale;
+    /* Always leave this much of the tree on screen - or the whole of it, when
+       the whole of it is smaller than that. One rule for every size: pinning
+       a small tree to the middle instead would make the canvas refuse to
+       move at all, which reads as a broken drag rather than a tidy one. */
+    const reach = Math.min(margin, end - start, extent / 2);
+    return Math.min(extent - reach - start, Math.max(reach - end, value));
+  };
+  return {
+    ...view,
+    x: axis(view.x, content.minX, content.maxX, viewport.width),
+    y: axis(view.y, content.minY, content.maxY, viewport.height),
+  };
 }
 
 export function openCollapsedPath(
@@ -150,7 +192,8 @@ const FamilyTreeScene = memo(function FamilyTreeScene({ visibleTree, positions, 
     {branchIds.map((id) => {
       const p = positions.get(id)!;
       const isFolded = collapsed.has(id);
-      return <button key={`chip-${id}`} type="button" className="branch-chip" data-branch-person-id={id} style={{ left: `${p.x}px`, top: `${p.y + 56}px` }} aria-label={isFolded ? `Show ${hiddenCounts.get(id) ?? 0} hidden family members` : "Hide this branch"} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => { event.stopPropagation(); if (event.button === 0) onToggleBranch(id); }} onClick={(event) => { event.stopPropagation(); if (event.detail === 0) onToggleBranch(id); }}>{isFolded ? `Show ${hiddenCounts.get(id) ?? 0} more` : "Hide branch"}</button>;
+      const owner = visibleTree.people.find((candidate) => candidate.id === id);
+      return <button key={`chip-${id}`} type="button" className="branch-chip" data-branch-person-id={id} style={{ left: `${p.x}px`, top: `${p.y + 56}px` }} aria-label={isFolded ? `Show ${hiddenCounts.get(id) ?? 0} hidden family members` : "Hide this branch"} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => { event.stopPropagation(); if (event.button === 0) onToggleBranch(id); }} onClick={(event) => { event.stopPropagation(); if (event.detail === 0) onToggleBranch(id); }}><span className="branch-chip-action">{isFolded ? `Show ${hiddenCounts.get(id) ?? 0} more` : "Hide branch"}</span><span className="branch-chip-who">{owner ? `${owner.givenName || owner.displayName.split(" ")[0]}\u2019s family` : "family"}</span></button>;
     })}
   </>;
 });
@@ -211,63 +254,16 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
   const toggleBranch = useCallback((personId: string) => {
     setCollapsedState((stored) => toggleCollapsedBranch(stored ?? defaultCollapsed, personId));
   }, [defaultCollapsed]);
-  const { visibleTree, hiddenCounts, visibleSet } = useMemo(() => {
-    if (!fullLayout || collapsed.size === 0) {
-      const counts = new Map<string, number>();
-      return { visibleTree: tree, hiddenCounts: counts, visibleSet: new Set(tree.people.map((person) => person.id)) };
-    }
-    const parentless = new Set(tree.people.map((person) => person.id));
-    for (const link of tree.relationships) if (link.type === "parent") parentless.delete(link.toPersonId);
-    const spousesOf = new Map<string, string[]>();
-    for (const link of tree.relationships) {
-      if (link.type !== "spouse") continue;
-      const fromPartners = spousesOf.get(link.fromPersonId);
-      if (fromPartners) fromPartners.push(link.toPersonId);
-      else spousesOf.set(link.fromPersonId, [link.toPersonId]);
-      const toPartners = spousesOf.get(link.toPersonId);
-      if (toPartners) toPartners.push(link.fromPersonId);
-      else spousesOf.set(link.toPersonId, [link.fromPersonId]);
-    }
-    const hidden = new Set<string>();
-    const hideDescendants = (id: string) => {
-      for (const child of primaryChildren.get(id) ?? []) {
-        if (hidden.has(child)) continue;
-        hidden.add(child);
-        hideDescendants(child);
-      }
-    };
-    for (const id of collapsed) hideDescendants(id);
-    for (const [id, partners] of spousesOf) {
-      if (parentless.has(id) && partners.every((partner) => hidden.has(partner))) hidden.add(id);
-    }
-    const hiddenCounts = new Map<string, number>();
-    const countBranch = (id: string): number => {
-      const cached = hiddenCounts.get(id);
-      if (cached !== undefined) return cached;
-      let count = 0;
-      for (const child of primaryChildren.get(id) ?? []) {
-        count += 1 + countBranch(child);
-        for (const spouse of spousesOf.get(child) ?? []) if (parentless.has(spouse)) count += 1;
-      }
-      hiddenCounts.set(id, count);
-      return count;
-    };
-    for (const parent of primaryChildren.keys()) countBranch(parent);
-    const visibleSet = new Set(tree.people.filter((person) => !hidden.has(person.id)).map((person) => person.id));
-    const visibleTree: FamilyTree = hidden.size === 0 ? tree : {
-      people: tree.people.filter((person) => visibleSet.has(person.id)),
-      relationships: tree.relationships.filter((link) => visibleSet.has(link.fromPersonId) && visibleSet.has(link.toPersonId)),
-      stories: tree.stories,
-    };
-    return { visibleTree, hiddenCounts, visibleSet };
-  }, [tree, fullLayout, primaryChildren, collapsed]);
+  const { visibleTree, hiddenCounts, visibleSet } = useMemo(
+    () => foldBranches(tree, fullLayout, primaryChildren, collapsed),
+    [tree, fullLayout, primaryChildren, collapsed]);
   // Every derived structure is computed only when its graph inputs change;
   // camera frames are applied directly to the viewport below.
   // The world is measured in fixed pixels (cards have a fixed width), so a
   // couple's gap, the dash pattern, and every bar length look the same on
   // every screen size; the viewport transform provides pan and zoom.
-  const { positions, spouseLines, hooks } = useMemo(() => {
-    if (!ready || !fullLayout) return { positions: new Map<string, CanvasPosition>(), spouseLines: [] as SpouseLine[], hooks: [] as ParentHook[] };
+  const { positions, spouseLines, hooks, bounds } = useMemo(() => {
+    if (!ready || !fullLayout) return { positions: new Map<string, CanvasPosition>(), spouseLines: [] as SpouseLine[], hooks: [] as ParentHook[], bounds: null as ContentBounds | null };
     const SLOT = 270, ROW = 190;
     const sceneTree = visibleTree;
     // With no folded branches visibleTree is the original tree, so reuse the
@@ -350,22 +346,34 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
         })),
       }];
     });
-    return { positions, spouseLines, hooks };
+    /* The rectangle the cards actually fill, which is what the camera is
+       allowed to leave: a card is drawn from its own top-left corner, so the
+       far edges carry one card's width and height. */
+    const xs = [...positions.values()].map((point) => point.x);
+    const ys = [...positions.values()].map((point) => point.y);
+    const bounds: ContentBounds | null = xs.length
+      ? { minX: Math.min(...xs), maxX: Math.max(...xs) + CARD_WIDTH, minY: Math.min(...ys), maxY: Math.max(...ys) + CARD_HEIGHT }
+      : null;
+    return { positions, spouseLines, hooks, bounds };
   }, [visibleTree, tree, fullLayout, ready]);
   const highlighted = useMemo(() => new Set(highlightedIds), [highlightedIds]);
   const branchIds = useMemo(() => [...primaryChildren.keys()].filter((id) => visibleSet.has(id) && positions.has(id)), [primaryChildren, visibleSet, positions]);
   const [committedView, setCommittedView] = useState<CanvasView>({ x: 0, y: 0, scale: 1 });
+  // the paint loop reads the bounds through a ref, so a rebuilt tree does not
+  // rebuild the camera callbacks
   const [isPanning, setIsPanning] = useState(false);
   const [cursorMode, setCursorMode] = useState<CanvasCursorMode>("grab");
   const gesture = useRef<{ x: number; y: number; view: CanvasView; moved: boolean } | null>(null);
   const cursorRef = useRef<HTMLSpanElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const contentBounds = useRef<ContentBounds | null>(null);
   const zoomLevelRef = useRef<HTMLButtonElement>(null);
   const viewRef = useRef<CanvasView>(committedView);
   const cameraFrame = useRef(0);
   const cameraAnimation = useRef(0);
   const wheelCommitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  useLayoutEffect(() => { contentBounds.current = bounds; }, [bounds]);
   const cancelCameraAnimation = useCallback(() => {
     if (cameraAnimation.current) cancelAnimationFrame(cameraAnimation.current);
     cameraAnimation.current = 0;
@@ -374,7 +382,11 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
   // Camera input is much more frequent than graph changes. Keep the current
   // camera in a ref, paint at most once per animation frame, and expose the
   // settled value to React only at gesture boundaries/control clicks.
-  const paintView = useCallback((next: CanvasView) => {
+  const paintView = useCallback((raw: CanvasView) => {
+    // every camera change lands here - drag, wheel, keys, animation - so the
+    // bound is applied once, where the view is actually adopted
+    const frame = viewportRef.current?.parentElement?.getBoundingClientRect();
+    const next = clampToContent(raw, contentBounds.current, { width: frame?.width ?? 0, height: frame?.height ?? 0 });
     viewRef.current = next;
     if (cameraFrame.current) return;
     cameraFrame.current = requestAnimationFrame(() => {
@@ -408,7 +420,10 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
    * wander down the branches. A card is 15rem wide; on a narrow canvas it
    * opens far enough out to see more than one of them. */
   const topOfTree = useCallback((width = cursorRef.current?.parentElement?.getBoundingClientRect().width ?? 0): CanvasView =>
-    ({ x: width / 2, y: 30, scale: clampScale(Math.min(1, width / 640)) }), []);
+    // two steps back from fitting one card comfortably - the same place the
+    // minus button reaches in two presses - so the tree arrives as a shape
+    // rather than as a wall of cards
+    ({ x: width / 2, y: 30, scale: clampScale(Math.min(1, width / 640) * 0.81) }), []);
   const goToTop = useCallback(() => {
     // a hidden or mid-transition pane measures zero, and zero commits scale
     // 0.5 pinned to the left edge instead of the view the control promises
@@ -492,18 +507,20 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
     }
     centerOn(person, true);
   }, [focusPersonId, positions, tree.people, centerOn, point]);
-  /* Opening a branch inserts cards, and a tidy layout slides its neighbours
-     apart to make room. The card that was clicked should not be one of them:
-     the view shifts by exactly what that card's own position changed. */
+  /* Opening a branch inserts cards and slides the neighbours apart to make
+     room, and what was just opened is what the reader wants to look at, so
+     the camera goes to it rather than merely holding it still. */
   useLayoutEffect(() => {
     const hold = takeHeldCard(holdInPlace);
     if (!hold) return;
+    const opened = tree.people.find((person) => person.id === hold.id);
+    if (opened && positions.has(hold.id)) { centerOn(opened, true); return; }
     const card = cursorRef.current?.parentElement?.querySelector(`[data-person-id="${hold.id}"]`);
     if (!card) return;
     const now = card.getBoundingClientRect();
     const dx = hold.at.left - now.left, dy = hold.at.top - now.top;
     if (Math.abs(dx) > 0.5 || Math.abs(dy) > 0.5) commitView(panView(viewRef.current, { x: dx, y: dy }));
-  }, [positions, commitView]);
+  }, [positions, commitView, tree.people, centerOn]);
   // Open on the patriarch: world x 0 is the layout anchor. The canvas animates
   // open when the chat collapses beside it, so the frame waits for a width
   // that has stopped moving - measured mid-transition it once latched onto
@@ -554,7 +571,13 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
     if (!gesture.current) return;
     const dx = event.clientX - gesture.current.x;
     const dy = event.clientY - gesture.current.y;
-    if (Math.abs(dx) + Math.abs(dy) > 4) gesture.current.moved = true;
+    if (Math.hypot(dx, dy) > DRAG_THRESHOLD) gesture.current.moved = true;
+    /* A hand moves a pixel or two while clicking. Panning on that slid the
+       whole tree down and right on every click - and worse, slid the card
+       out from under the pointer, so the click that followed landed on
+       nothing and the card never opened. Nothing moves until the pointer
+       has travelled far enough to mean it. */
+    if (!gesture.current.moved) return;
     paintView(panView(gesture.current.view, { x: dx, y: dy }));
   };
   const end = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -601,11 +624,14 @@ export function FamilyTreeCanvas({ tree, onSelect, highlightedIds = noHighlighte
   return <div className="family-canvas" role="application" aria-label="Interactive family tree. Use arrow keys to pan, plus or minus to zoom, 0 to reset, and Home for the top of the tree." tabIndex={0} data-custom-cursor="true" data-interactive="true" data-panning={isPanning ? "true" : "false"} style={{ cursor: isPanning ? "grabbing" : "grab" }} onKeyDown={keyDown} onPointerEnter={positionCursor} onPointerLeave={hideCursor} onPointerDown={begin} onPointerMove={move} onPointerUp={end} onPointerCancel={end} onLostPointerCapture={end} onWheel={wheel}>
     <div className="canvas-hit-surface" aria-hidden="true" style={{ cursor: isPanning ? "grabbing" : "grab" }} />
     <div className="canvas-legend" aria-hidden="true"><i className="legend-swatch legend-parent" /> parent <i className="legend-swatch legend-marriage" /> marriage</div>
-    <div className="canvas-controls" role="group" aria-label="Canvas zoom controls">
-      <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => zoomBy(0.9)} aria-label="Zoom out" title="Zoom out">−</button>
-      <button ref={zoomLevelRef} type="button" className="canvas-zoom-level" onPointerDown={(event) => event.stopPropagation()} onClick={() => commitView({ x: 0, y: 0, scale: 1 })} aria-label="Reset zoom to 100 percent" title="Reset zoom">{Math.round(committedView.scale * 100)}%</button>
-      <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => zoomBy(1.1)} aria-label="Zoom in" title="Zoom in">＋</button>
-      <button type="button" className="canvas-top" onPointerDown={(event) => event.stopPropagation()} onClick={goToTop} aria-label="Go to the top of the tree" title="Top of the tree (Home)">⌂</button>
+    <div className="canvas-controls" role="group" aria-label="Zoom and position">
+      <span className="canvas-zoom-caption" aria-hidden="true">zoom</span>
+      <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => zoomBy(0.9)} aria-label="Zoom out" title="Zoom out (− key)">−</button>
+      {/* the percentage says where the two buttons either side of it have got
+          to, and clicking it goes back to actual size */}
+      <button ref={zoomLevelRef} type="button" className="canvas-zoom-level" onPointerDown={(event) => event.stopPropagation()} onClick={() => commitView({ ...viewRef.current, scale: 1 })} aria-label={`Zoom ${Math.round(committedView.scale * 100)} percent. Click for actual size.`} title="Zoom level — click for actual size (100%)">{Math.round(committedView.scale * 100)}%</button>
+      <button type="button" onPointerDown={(event) => event.stopPropagation()} onClick={() => zoomBy(1.1)} aria-label="Zoom in" title="Zoom in (+ key)">＋</button>
+      <button type="button" className="canvas-top" onPointerDown={(event) => event.stopPropagation()} onClick={goToTop} aria-label="Go to the top of the tree" title="Back to the top of the tree (Home key)">⌂</button>
     </div>
     <div ref={viewportRef} className="tree-viewport" style={{ transform: `translate(${committedView.x}px, ${committedView.y}px) scale(${committedView.scale})`, "--tree-scale": String(committedView.scale) } as React.CSSProperties}>
       <FamilyTreeScene visibleTree={visibleTree} positions={positions} spouseLines={spouseLines} hooks={hooks} highlighted={highlighted} branchIds={branchIds} collapsed={collapsed} hiddenCounts={hiddenCounts} kinship={kinship} estimates={estimates} onSelect={onSelect} onOpenBranch={openBranch} onToggleBranch={toggleBranch} />
