@@ -1460,3 +1460,6 @@ html[lang="fa"] { font-variant-numeric: normal; }
 .fact-estimate { margin:.2rem 0 0; color:var(--muted); font-size:.78rem; font-style:italic; }
 /* who to ask about a gap */
 .fill-row-ask { color:var(--accent, #7fb08f); font-size:.72rem; font-style:italic; white-space:nowrap; }
+/* the answer to an add appears where the adding happened, not at the far end
+   of a long record */
+.relative-picker-notice { margin:0; color:var(--muted); font-size:.78rem; }

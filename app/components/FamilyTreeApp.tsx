@@ -15,14 +15,39 @@ import { LANGUAGES, LANGUAGE_FLAGS, LANGUAGE_NAMES, type Lang } from "../../lib/
 import { BUILD_ID, VERSION } from "../../lib/build";
 import { isUsefulArchivePath, selectedFileKey, selectedFilePath } from "../../lib/upload-policy";
 
-const TimelineView = lazy(() => import("./ArchiveViews").then((module) => ({ default: module.TimelineView })));
-const CalendarView = lazy(() => import("./ArchiveViews").then((module) => ({ default: module.CalendarView })));
-const WorldMapView = lazy(() => import("./ArchiveViews").then((module) => ({ default: module.WorldMapView })));
-const StatisticsView = lazy(() => import("./ArchiveViews").then((module) => ({ default: module.StatisticsView })));
-const FocusFamilyView = lazy(() => import("./TreeViews").then((module) => ({ default: module.FocusFamilyView })));
-const OutlineView = lazy(() => import("./TreeViews").then((module) => ({ default: module.OutlineView })));
-const MissingDataView = lazy(() => import("./TreeViews").then((module) => ({ default: module.MissingDataView })));
-const PersonProfilePanel = lazy(() => import("./PersonProfilePanel"));
+/** Load a view's code, surviving a deploy.
+ *
+ * Every build names its chunks by content, so the moment a new version goes
+ * out the files this page was built against stop existing. A reader who
+ * opens a view in that window asks for a file that is no longer there,
+ * React hands the whole archive to the error boundary, and the family sees
+ * an error page because somebody pushed. Retry once for a blip, then reload
+ * - the new build is already serving - and never more than once per visit,
+ * so a genuine fault cannot become a loop.
+ */
+const RELOADED_FOR_CHUNK = "archive-reloaded-for-build";
+function chunk<T>(load: () => Promise<T>): () => Promise<T> {
+  return () => load().catch(() => new Promise<T>((resolve, reject) => {
+    setTimeout(() => {
+      load().then(resolve).catch((failed) => {
+        let already = "";
+        try { already = window.sessionStorage.getItem(RELOADED_FOR_CHUNK) ?? ""; } catch { /* private mode */ }
+        if (already) { reject(failed); return; }
+        try { window.sessionStorage.setItem(RELOADED_FOR_CHUNK, "1"); } catch { /* private mode */ }
+        window.location.reload();
+      });
+    }, 400);
+  }));
+}
+
+const TimelineView = lazy(chunk(() => import("./ArchiveViews").then((module) => ({ default: module.TimelineView }))));
+const CalendarView = lazy(chunk(() => import("./ArchiveViews").then((module) => ({ default: module.CalendarView }))));
+const WorldMapView = lazy(chunk(() => import("./ArchiveViews").then((module) => ({ default: module.WorldMapView }))));
+const StatisticsView = lazy(chunk(() => import("./ArchiveViews").then((module) => ({ default: module.StatisticsView }))));
+const FocusFamilyView = lazy(chunk(() => import("./TreeViews").then((module) => ({ default: module.FocusFamilyView }))));
+const OutlineView = lazy(chunk(() => import("./TreeViews").then((module) => ({ default: module.OutlineView }))));
+const MissingDataView = lazy(chunk(() => import("./TreeViews").then((module) => ({ default: module.MissingDataView }))));
+const PersonProfilePanel = lazy(chunk(() => import("./PersonProfilePanel")));
 
 type Props = {
   initialTree: FamilyTree | null;
@@ -104,10 +129,20 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
   useEffect(() => {
     if (treeLoaded) return;
     let cancelled = false;
-    fetch("/api/tree")
-      .then((response) => response.json() as Promise<FamilyTree>)
-      .then((data) => { if (!cancelled) { setTree(data); setTreeLoaded(true); } })
-      .catch(() => { if (!cancelled) setTreeLoaded(true); });
+    /* A deploy takes the worker out from under an in-flight request for a
+       moment. Giving up on the first refusal showed the family an empty
+       archive; three tries a second apart outlast the changeover. */
+    const load = (attempt: number) => {
+      fetch("/api/tree")
+        .then((response) => response.ok ? response.json() as Promise<FamilyTree> : Promise.reject(new Error(String(response.status))))
+        .then((data) => { if (!cancelled) { setTree(data); setTreeLoaded(true); } })
+        .catch(() => {
+          if (cancelled) return;
+          if (attempt >= 3) { setTreeLoaded(true); return; }
+          setTimeout(() => { if (!cancelled) load(attempt + 1); }, attempt * 900);
+        });
+    };
+    load(1);
     return () => { cancelled = true; };
   }, [treeLoaded]);
   const [input, setInput] = useState("");
@@ -271,7 +306,9 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
      where in the family they were - and the shared links two people opened
      side by side showed them different things. Arriving in a known place is
      worth more than resuming an unremembered one. */
-  const [viewMode, setViewModeState] = useState<ViewMode>("tree");
+  // the first tab, whichever it is: the strip is the menu, and the archive
+  // opens at the top of it
+  const [viewMode, setViewModeState] = useState<ViewMode>(VIEW_MODES[0]);
   /* Documents the family sent are read one request at a time, and this is
      what makes the requests: an editor arriving drains whatever is waiting.
      There is no timer anywhere - a standing job is the owner's decision, not
@@ -566,7 +603,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
               {viewMode !== "timeline" && viewMode !== "map" && !treeLoaded && <div className="family-canvas" aria-busy="true" aria-label="Loading the family tree" />}
               {viewMode === "tree" && treeLoaded && (tree.people.length ? <FamilyTreeCanvas tree={tree} meId={identity} pivotId={selectedPerson?.id ?? null} highlightedIds={highlightedIds} focusPersonId={highlightedIds[0]} onSelect={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
               <Suspense fallback={<div className="family-canvas" aria-busy="true" aria-label="Loading view" />}>
-                {viewMode === "family" && treeLoaded && (focal ? <FocusFamilyView tree={tree} focusId={focal.id} selectedId={selectedPerson?.id ?? null} canBack canForward onBack={() => window.history.back()} onForward={() => window.history.forward()} onPick={(person) => openPerson(person)} onSelectOnly={(person) => openPerson(person, true, false)} onPreview={setHoverPreview} onOpen={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
+                {viewMode === "family" && treeLoaded && (focal ? <FocusFamilyView tree={tree} focusId={focal.id} selectedId={selectedPerson?.id ?? null} onPick={(person) => openPerson(person)} onSelectOnly={(person) => openPerson(person, true, false)} onPreview={setHoverPreview} onOpen={(person) => openPerson(person)} /> : <EmptyTree canEdit={viewer.canEdit} />)}
                 {viewMode === "list" && treeLoaded && <OutlineView tree={tree} onSelect={(person) => openPerson(person)} onPreview={setHoverPreview} meId={identity} />}
                 {viewMode === "fill" && viewer.canEdit && treeLoaded && <MissingDataView tree={tree} meId={identity} onSaved={setTree} onOpen={(person) => openPerson(person)} />}
                 {viewMode === "timeline" && <TimelineView tree={tree} meId={identity} onSelect={(person) => { setHighlightedIds([person.id]); setSelectedPerson(person); }} />}

@@ -26,7 +26,7 @@ function PedCursor({ mode, cursorRef }: { mode: "grab" | "grabbing" | "pointer";
  * left, the focal couple in the middle, parents and grandparents branching
  * to the right, with measured connector lines, gendered silhouettes, ghost
  * "add parent" slots, and a click popover offering Tree here / Profile. */
-export function FocusFamilyView({ tree, focusId, selectedId, onPick, onSelectOnly, onPreview, onBack, onForward, canBack, canForward, onOpen }: { tree: FamilyTree; focusId: string; selectedId?: string | null; onPick: (person: Person) => void; onSelectOnly: (person: Person) => void; onPreview: (person: Person | null) => void; onBack?: () => void; onForward?: () => void; canBack?: boolean; canForward?: boolean; onOpen: (person: Person) => void }) {
+export function FocusFamilyView({ tree, focusId, selectedId, onPick, onSelectOnly, onPreview, onOpen }: { tree: FamilyTree; focusId: string; selectedId?: string | null; onPick: (person: Person) => void; onSelectOnly: (person: Person) => void; onPreview: (person: Person | null) => void; onOpen: (person: Person) => void }) {
   const { t } = useLanguage();
   const maps = useMemo(() => buildRelationMaps(tree), [tree]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -357,8 +357,9 @@ export function FocusFamilyView({ tree, focusId, selectedId, onPick, onSelectOnl
   return <section className="focus-view ped-view" aria-label="Family around one person">
     <div className="focus-toolbar">
       <div className="focus-nav">
-        <button type="button" className="focus-back" onClick={onBack} disabled={!canBack} aria-label={t("family.back")}>←</button>
-        <button type="button" className="focus-back" onClick={onForward} disabled={!canForward} aria-label={t("family.forward")}>→</button>
+        {/* the record panel carries the only back and forward the archive has;
+            a second pair on the canvas was always enabled and often did
+            nothing, because there was nothing behind it to go back to */}
       </div>
       <p className="focus-hint" data-visible={hintVisible ? "true" : "false"} aria-hidden={!hintVisible}>{t("family.hint")}</p>
     </div>
