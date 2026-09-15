@@ -201,7 +201,17 @@ export function buildFamilyLayout(tree: FamilyTree): FamilyLayout {
   for (const [a, b] of pairs) {
     const winner = outranks(a, b) ? a : b;
     const loser = winner === a ? b : a;
-    if (!attachedTo.has(loser) && loser !== winner) attachedTo.set(loser, winner);
+    /* Only someone who married in leaves their place to stand beside their
+       partner. A person whose own parents are in this tree belongs in their
+       parents' row, with their brothers and sisters, and the marriage line
+       reaches across to their spouse. Pulling them out of it instead left
+       their parents' branch one child short of the number on its own chip,
+       and put them somewhere unrecognisable across the canvas.
+       This is per-tree, not per-person: the canvas rebuilds the layout from
+       what is on screen, so the same woman stands beside her husband while
+       her parents' branch is folded and steps back among her siblings the
+       moment it is opened. */
+    if (!attachedTo.has(loser) && loser !== winner && !hasParents(loser)) attachedTo.set(loser, winner);
   }
   // never attach to someone who is themselves attached into a cycle
   for (const [loser] of attachedTo) {
@@ -393,8 +403,8 @@ export function foldBranches(
   if (!layout || collapsed.size === 0) {
     return { visibleTree: tree, hiddenCounts: new Map(), visibleSet: new Set(tree.people.map((person) => person.id)) };
   }
-  const parentless = new Set(tree.people.map((person) => person.id));
-  for (const link of tree.relationships) if (link.type === "parent") parentless.delete(link.toPersonId);
+  const parentsOfPerson = new Map<string, string[]>();
+  for (const link of tree.relationships) if (link.type === "parent") appendMapValue(parentsOfPerson, link.toPersonId, link.fromPersonId);
   const spousesOf = new Map<string, string[]>();
   for (const link of tree.relationships) {
     if (link.type !== "spouse") continue;
@@ -410,38 +420,49 @@ export function foldBranches(
     }
   };
   for (const id of collapsed) hideDescendants(id);
-  /* A spouse the layout draws beside their partner sits in that couple's row,
-     not in the branch they were born into, so their visibility is their
-     partner's. Without this a wife whose own parents happen to be recorded
-     stayed hidden next to a visible husband - while a wife with no recorded
-     parents appeared - because she was still a descendant of her own folded
-     branch. */
-  for (const [spouse, partner] of layout.drawnBeside) {
-    if (hidden.has(partner)) hidden.add(spouse);
-    else hidden.delete(spouse);
-  }
-  // someone who married in and stands in nobody's row goes when the last
-  // partner who could anchor them goes
+  // someone who married in and has no family of their own here goes when the
+  // last partner who could anchor them goes
   for (const [id, partners] of spousesOf) {
-    if (!layout.drawnBeside.has(id) && parentless.has(id) && partners.every((partner) => hidden.has(partner))) hidden.add(id);
+    if (!(parentsOfPerson.get(id)?.length) && partners.length && partners.every((partner) => hidden.has(partner))) hidden.add(id);
   }
-  const hiddenCounts = new Map<string, number>();
-  const countBranch = (id: string): number => {
-    const cached = hiddenCounts.get(id);
-    if (cached !== undefined) return cached;
-    let count = 0;
-    for (const child of primaryChildren.get(id) ?? []) {
-      count += 1 + countBranch(child);
-      for (const spouse of spousesOf.get(child) ?? []) if (layout.drawnBeside.get(spouse) === child) count += 1;
+  /* Whoever's own family is folded away still belongs beside their spouse -
+     a wife does not vanish from her husband's side because her parents'
+     branch is shut. She rides in on his row, and her own parent links come
+     off the scene while she is there, so the layout does not try to seat her
+     in a family block that is not on screen. Open her parents' branch and
+     she steps back among her brothers and sisters. */
+  const ridingAlong = new Set<string>();
+  for (const person of tree.people) {
+    if (!hidden.has(person.id)) continue;
+    if ((spousesOf.get(person.id) ?? []).some((partner) => !hidden.has(partner))) {
+      hidden.delete(person.id);
+      ridingAlong.add(person.id);
     }
-    hiddenCounts.set(id, count);
-    return count;
+  }
+  /* A chip promises a number, so count the people who are actually away -
+     not everyone below, which double-counted a wife already on screen beside
+     her husband and left the branch one short of its own promise. */
+  const hiddenCounts = new Map<string, number>();
+  const branchCache = new Map<string, Set<string>>();
+  const awayUnder = (id: string): Set<string> => {
+    const cached = branchCache.get(id);
+    if (cached) return cached;
+    const away = new Set<string>();
+    branchCache.set(id, away);
+    for (const child of primaryChildren.get(id) ?? []) {
+      if (hidden.has(child)) away.add(child);
+      for (const spouse of spousesOf.get(child) ?? []) if (hidden.has(spouse)) away.add(spouse);
+      for (const deeper of awayUnder(child)) away.add(deeper);
+    }
+    return away;
   };
-  for (const parent of primaryChildren.keys()) countBranch(parent);
+  for (const parent of primaryChildren.keys()) hiddenCounts.set(parent, awayUnder(parent).size);
   const visibleSet = new Set(tree.people.filter((person) => !hidden.has(person.id)).map((person) => person.id));
-  const visibleTree: FamilyTree = hidden.size === 0 ? tree : {
+  const visibleTree: FamilyTree = hidden.size === 0 && ridingAlong.size === 0 ? tree : {
     people: tree.people.filter((person) => visibleSet.has(person.id)),
-    relationships: tree.relationships.filter((link) => visibleSet.has(link.fromPersonId) && visibleSet.has(link.toPersonId)),
+    relationships: tree.relationships.filter((link) =>
+      visibleSet.has(link.fromPersonId) && visibleSet.has(link.toPersonId)
+      && !(link.type === "parent" && ridingAlong.has(link.toPersonId))),
     stories: tree.stories,
   };
   return { visibleTree, hiddenCounts, visibleSet };
