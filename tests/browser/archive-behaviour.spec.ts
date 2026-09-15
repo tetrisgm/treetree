@@ -44,9 +44,15 @@ test.beforeEach(async ({ context, baseURL }) => {
   await context.addCookies([{ name: "archive_session", value: session(process.env.PLAYWRIGHT_MEMBER_EMAIL || "browser-suite@archive.example"), url: baseURL ?? "https://archive.example" }]);
 });
 
-test("the archive opens on the Tree", async ({ page }) => {
+test("the archive opens on the first tab, the same way every visit", async ({ page }) => {
   await ready(page);
-  await expect(page.locator(".archive-view-switcher button.is-active")).toHaveText("Tree");
+  const first = await page.locator(".archive-view-switcher button").first().textContent();
+  await expect(page.locator(".archive-view-switcher button.is-active")).toHaveText(first!);
+  // and choosing another view does not make it the one that greets you next
+  await openView(page, "List");
+  await page.reload();
+  await ready(page);
+  await expect(page.locator(".archive-view-switcher button.is-active")).toHaveText(first!);
 });
 
 test("hovering a card shows the record and moves nothing", async ({ page }) => {
@@ -101,8 +107,9 @@ test("hovering a name in the List previews that person", async ({ page }) => {
   await expect(page.locator(".person-hover-preview h2")).toBeVisible();
 });
 
-test("clicking a tree card opens its branch and leaves the card where it is", async ({ page }) => {
+test("clicking a tree card opens its branch and brings the camera to it", async ({ page }) => {
   await ready(page);
+  await openView(page, "Tree");
   await page.locator(".tree-card").first().waitFor();
   await page.waitForTimeout(1200);
   const target = await page.evaluate(() => {
@@ -126,29 +133,33 @@ test("clicking a tree card opens its branch and leaves the card where it is", as
   await page.locator(`[data-person-id="${target!.id}"]`).click({ position: { x: 20, y: 20 } });
   await page.waitForTimeout(1500);
   expect(await page.locator(".tree-card").count()).toBeGreaterThan(before);
-  const after = await page.evaluate((id) => { const r = document.querySelector(`[data-person-id="${id}"]`)!.getBoundingClientRect(); return { x: Math.round(r.x), y: Math.round(r.y) }; }, target!.id);
-  expect(Math.abs(after.x - target!.x)).toBeLessThan(4);
-  expect(Math.abs(after.y - target!.y)).toBeLessThan(4);
+  // what was just opened is what the reader is looking at, so it comes to
+  // the middle rather than staying wherever it happened to be
+  const canvas = (await page.locator(".family-canvas").boundingBox())!;
+  const after = await page.evaluate((id) => { const r = document.querySelector(`[data-person-id="${id}"]`)!.getBoundingClientRect(); return { x: Math.round(r.x + r.width / 2), y: Math.round(r.y + r.height / 2) }; }, target!.id);
+  expect(Math.abs(after.x - (canvas.x + canvas.width / 2))).toBeLessThan(140);
+  expect(Math.abs(after.y - (canvas.y + canvas.height / 2))).toBeLessThan(140);
 
   const branch = page.locator(`[data-branch-person-id="${target!.id}"]`);
-  await expect(branch).toHaveText("Hide branch");
+  await expect(branch).toContainText("Hide branch");
   await branch.click();
   await expect(branch).toContainText("Show");
   await expect.poll(() => page.locator(".tree-card").count()).toBeLessThan(before + 1);
   await branch.click();
-  await expect(branch).toHaveText("Hide branch");
+  await expect(branch).toContainText("Hide branch");
   await expect.poll(() => page.locator(".tree-card").count()).toBeGreaterThan(before);
 });
 
 test("a selected person's branch stays hidden until the user shows it again", async ({ page }) => {
   await ready(page);
+  await openView(page, "Tree");
   await page.locator(".tree-card").first().waitFor();
   const branchId = await page.evaluate(() => {
     const visible = (element: Element) => {
       const r = element.getBoundingClientRect();
       return r.left > 0 && r.right < window.innerWidth && r.top > 80 && r.bottom < window.innerHeight;
     };
-    const chip = [...document.querySelectorAll(".branch-chip")].find((candidate) => candidate.textContent === "Hide branch" && visible(candidate));
+    const chip = [...document.querySelectorAll(".branch-chip")].find((candidate) => candidate.textContent?.startsWith("Hide branch") && visible(candidate));
     return (chip as HTMLElement | undefined)?.dataset.branchPersonId ?? null;
   });
   test.skip(!branchId, "no expanded branch is on camera at this size");
@@ -159,7 +170,7 @@ test("a selected person's branch stays hidden until the user shows it again", as
   await page.waitForTimeout(500);
   await expect(branch).toContainText("Show");
   await branch.click();
-  await expect(branch).toHaveText("Hide branch");
+  await expect(branch).toContainText("Hide branch");
 });
 
 test("the map zooms on open ground, not on a city, and names both", async ({ page }) => {
@@ -248,7 +259,12 @@ for (const [label, width, height] of [["iPhone", 390, 844], ["iPad mini portrait
     const report = await page.evaluate(() => ({
       inner: window.innerWidth,
       doc: document.documentElement.scrollWidth,
+      /* The tree and the pedigree are canvases the reader zooms, so what
+         they measure on screen is the zoom, not the size of the control:
+         a card drawn at 0.64 reports 35px and is 55px the moment they pinch
+         in. The rule is about the chrome around them, which does not scale. */
       small: [...document.querySelectorAll("button, a[href], select, input")].filter((el) => {
+        if (el.closest(".ped-pan, .tree-viewport")) return false;
         const r = el.getBoundingClientRect();
         return r.width > 0 && r.height > 0 && (r.height < 43 || r.width < 43) && !el.className.toString().includes("sr-only");
       }).map((el) => `${(el.className || el.tagName).toString().slice(0, 30)}`),
