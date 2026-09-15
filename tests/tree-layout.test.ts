@@ -123,13 +123,12 @@ describe("tree generation layout", () => {
   });
 });
 
-describe("a spouse who married in keeps their partner's company", () => {
+describe("where a married person stands", () => {
   /* The reference archive's own shape: two brothers, each married. One wife
-     has no parents recorded; the other's parents are in the tree, in a
-     branch of their own that stays folded. Both are drawn beside a husband,
-     so both belong on screen when he is. */
+     married in with no parents recorded; the other has a father in the tree,
+     in a branch of her own. */
   const family: FamilyTree = {
-    people: ["patriarch", "brotherA", "brotherB", "wifeA", "wifeB", "wifeBFather", "grandchild"].map((id) =>
+    people: ["patriarch", "brotherA", "brotherB", "wifeA", "wifeB", "wifeBFather", "wifeBSister", "grandchild"].map((id) =>
       ({ id, displayName: id, gender: id.startsWith("wife") ? "female" : "male", givenName: id, familyName: null, maidenName: null, birthDate: "1900", deathDate: null, birthPlace: null, deathPlace: null, birthCity: null, birthCountry: null, deathCity: null, deathCountry: null, burialPlace: null, residence: null, biography: null, photoAttachmentId: null })),
     relationships: [
       { id: "r1", fromPersonId: "patriarch", toPersonId: "brotherA", type: "parent", status: null },
@@ -138,33 +137,57 @@ describe("a spouse who married in keeps their partner's company", () => {
       // recorded the other way round, as half this archive's marriages are
       { id: "r4", fromPersonId: "wifeB", toPersonId: "brotherB", type: "spouse", status: null },
       { id: "r5", fromPersonId: "wifeBFather", toPersonId: "wifeB", type: "parent", status: null },
-      { id: "r6", fromPersonId: "brotherA", toPersonId: "grandchild", type: "parent", status: null },
+      { id: "r6", fromPersonId: "wifeBFather", toPersonId: "wifeBSister", type: "parent", status: null },
+      { id: "r7", fromPersonId: "brotherA", toPersonId: "grandchild", type: "parent", status: null },
     ],
     stories: [],
   };
-  const layout = buildFamilyLayout(family);
-  const primaryChildren = new Map<string, string[]>();
-  for (const [child, parent] of layout.primaryParent) {
-    const kids = primaryChildren.get(parent);
-    if (kids) kids.push(child); else primaryChildren.set(parent, [child]);
-  }
+  const childrenByParent = (layout: ReturnType<typeof buildFamilyLayout>) => {
+    const map = new Map<string, string[]>();
+    for (const [child, parent] of layout.primaryParent) {
+      const kids = map.get(parent);
+      if (kids) kids.push(child); else map.set(parent, [child]);
+    }
+    return map;
+  };
+  const full = buildFamilyLayout(family);
+  const primaryChildren = childrenByParent(full);
 
-  it("draws both wives beside their husbands whichever way the marriage was recorded", () => {
-    expect(layout.drawnBeside.get("wifeA")).toBe("brotherA");
-    expect(layout.drawnBeside.get("wifeB")).toBe("brotherB");
+  it("keeps someone with a family here in their parents' row, beside their sister", () => {
+    // her father's children are both his, and neither is pulled away to a spouse
+    expect((primaryChildren.get("wifeBFather") ?? []).sort()).toEqual(["wifeB", "wifeBSister"]);
+    expect(full.drawnBeside.has("wifeB")).toBe(false);
+    // the one who married in has no row of her own, so she stands in his
+    expect(full.drawnBeside.get("wifeA")).toBe("brotherA");
   });
 
-  it("keeps a wife on screen when her own family's branch is folded", () => {
-    const { visibleSet } = foldBranches(family, layout, primaryChildren, new Set(["wifeBFather"]));
-    expect(visibleSet.has("brotherB")).toBe(true);
+  it("stands her beside her husband while her own family is folded away", () => {
+    const { visibleTree, visibleSet } = foldBranches(family, full, primaryChildren, new Set(["wifeBFather"]));
     expect(visibleSet.has("wifeB")).toBe(true);
+    expect(visibleSet.has("wifeBSister")).toBe(false);
+    // the canvas lays out what is on screen, and there she has no family of
+    // her own, so she joins her husband's row
+    const onScreen = buildFamilyLayout(visibleTree);
+    expect(onScreen.drawnBeside.get("wifeB")).toBe("brotherB");
   });
 
-  it("takes a wife away with the husband she is drawn beside", () => {
-    const { visibleSet } = foldBranches(family, layout, primaryChildren, new Set(["patriarch"]));
-    expect(visibleSet.has("brotherB")).toBe(false);
-    expect(visibleSet.has("wifeB")).toBe(false);
-    expect(visibleSet.has("wifeA")).toBe(false);
+  it("takes a wife away with the husband she was only ever beside", () => {
+    const { visibleSet } = foldBranches(family, full, primaryChildren, new Set(["patriarch"]));
     expect(visibleSet.has("patriarch")).toBe(true);
+    // she married in and had no row of her own, so she goes where he goes
+    expect(visibleSet.has("brotherA")).toBe(false);
+    expect(visibleSet.has("wifeA")).toBe(false);
+    /* He does keep his place at his wife's side, because her family is on
+       screen and a couple is not split by whichever branch is folded. */
+    expect(visibleSet.has("wifeB")).toBe(true);
+    expect(visibleSet.has("brotherB")).toBe(true);
+  });
+
+  it("promises on the chip exactly the people the branch then shows", () => {
+    const { hiddenCounts } = foldBranches(family, full, primaryChildren, new Set(["wifeBFather"]));
+    const folded = foldBranches(family, full, primaryChildren, new Set(["wifeBFather"]));
+    const opened = foldBranches(family, full, primaryChildren, new Set());
+    const appeared = [...opened.visibleSet].filter((id) => !folded.visibleSet.has(id));
+    expect(hiddenCounts.get("wifeBFather")).toBe(appeared.length);
   });
 })
