@@ -183,11 +183,18 @@ describe("where a married person stands", () => {
     expect(visibleSet.has("brotherB")).toBe(true);
   });
 
-  it("promises on the chip exactly the people the branch then shows", () => {
-    const { hiddenCounts } = foldBranches(family, full, primaryChildren, new Set(["wifeBFather"]));
+  it("promises the family, and opening the branch seats exactly that many in it", () => {
     const folded = foldBranches(family, full, primaryChildren, new Set(["wifeBFather"]));
     const opened = foldBranches(family, full, primaryChildren, new Set());
-    const appeared = [...opened.visibleSet].filter((id) => !folded.visibleSet.has(id));
-    expect(hiddenCounts.get("wifeBFather")).toBe(appeared.length);
+    const seatedUnder = (tree: FamilyTree, parent: string) => {
+      const scene = buildFamilyLayout(tree);
+      return [...scene.primaryParent].filter(([, owner]) => owner === parent).map(([child]) => child);
+    };
+    const before = seatedUnder(folded.visibleTree, "wifeBFather");
+    const after = seatedUnder(opened.visibleTree, "wifeBFather");
+    // both daughters are in his row once it is open - the married one has
+    // come back from her husband's side - and the chip said so
+    expect(after.sort()).toEqual(["wifeB", "wifeBSister"]);
+    expect(folded.hiddenCounts.get("wifeBFather")).toBe(after.length - before.length);
   });
 })

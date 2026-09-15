@@ -439,9 +439,11 @@ export function foldBranches(
       ridingAlong.add(person.id);
     }
   }
-  /* A chip promises a number, so count the people who are actually away -
-     not everyone below, which double-counted a wife already on screen beside
-     her husband and left the branch one short of its own promise. */
+  /* A chip promises a number, and what a reader expects behind it is the
+     family: open a woman's parents and all four of their children are in
+     that row, including the one who was standing beside her husband a moment
+     ago. So it counts everyone in the branch who is not seated in it yet -
+     those who are away, and those who are on screen somewhere else. */
   const hiddenCounts = new Map<string, number>();
   const branchCache = new Map<string, Set<string>>();
   const awayUnder = (id: string): Set<string> => {
@@ -450,7 +452,7 @@ export function foldBranches(
     const away = new Set<string>();
     branchCache.set(id, away);
     for (const child of primaryChildren.get(id) ?? []) {
-      if (hidden.has(child)) away.add(child);
+      if (hidden.has(child) || ridingAlong.has(child)) away.add(child);
       for (const spouse of spousesOf.get(child) ?? []) if (hidden.has(spouse)) away.add(spouse);
       for (const deeper of awayUnder(child)) away.add(deeper);
     }

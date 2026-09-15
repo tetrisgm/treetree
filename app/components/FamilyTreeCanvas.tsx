@@ -193,7 +193,9 @@ const FamilyTreeScene = memo(function FamilyTreeScene({ visibleTree, positions, 
       const p = positions.get(id)!;
       const isFolded = collapsed.has(id);
       const owner = visibleTree.people.find((candidate) => candidate.id === id);
-      return <button key={`chip-${id}`} type="button" className="branch-chip" data-branch-person-id={id} style={{ left: `${p.x}px`, top: `${p.y + 56}px` }} aria-label={isFolded ? `Show ${hiddenCounts.get(id) ?? 0} hidden family members` : "Hide this branch"} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => { event.stopPropagation(); if (event.button === 0) onToggleBranch(id); }} onClick={(event) => { event.stopPropagation(); if (event.detail === 0) onToggleBranch(id); }}><span className="branch-chip-action">{isFolded ? `Show ${hiddenCounts.get(id) ?? 0} more` : "Hide branch"}</span><span className="branch-chip-who">{owner ? `${owner.givenName || owner.displayName.split(" ")[0]}\u2019s family` : "family"}</span></button>;
+      return <button key={`chip-${id}`} type="button" className="branch-chip" data-branch-person-id={id} style={{ left: `${p.x}px`, top: `${p.y + 56}px` }} aria-label={isFolded ? `Show all ${hiddenCounts.get(id) ?? 0} of this family` : "Hide this branch"} onPointerDown={(event) => event.stopPropagation()} onPointerUp={(event) => { event.stopPropagation(); if (event.button === 0) onToggleBranch(id); }} onClick={(event) => { event.stopPropagation(); if (event.detail === 0) onToggleBranch(id); }}>{/* "all", not "more": one of them may be on screen already, at a
+          spouse's side, and will come back to this row when it opens */}
+            <span className="branch-chip-action">{isFolded ? `Show all ${hiddenCounts.get(id) ?? 0}` : "Hide branch"}</span><span className="branch-chip-who">{owner ? `${owner.givenName || owner.displayName.split(" ")[0]}\u2019s family` : "family"}</span></button>;
     })}
   </>;
 });
