@@ -14,7 +14,7 @@
     "gate": "npm test && npm run typecheck && npm run lint && npm run build",
     "deploy": "npm run build && node scripts/normalize-deploy-config.mjs && wrangler deploy --keep-vars",
     "db:generate": "drizzle-kit generate",
-    "test": "vitest run --config vitest.config.ts",
+    "test": "vitest run --config vitest.config.ts"
   },
   "dependencies": {
     "drizzle-orm": "0.45.2",
