@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { FamilyTreeCanvas } from "../components/FamilyTreeCanvas";
 import type { FamilyTree, Person } from "../../lib/types";
 import { registerBrowserTools, type BrowserTool } from "../../lib/webmcp-register";
-import Link from "next/link";
 import { BUILD_ID, VERSION } from "../../lib/build";
 import { linkDemoPeople, newDemoPerson, sampleFamily, startingFamily } from "../../lib/demo-family";
 
@@ -13,6 +12,8 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
   const [tree, setTree] = useState(BASE); const [selected, setSelected] = useState<Person | null>(null);
   const [message, setMessage] = useState("This sandbox uses invented people and resets in your browser. A browser agent (WebMCP) can build here too — its tools create, link, undo, and reset this very canvas.");
   const [undoDepth, setUndoDepth] = useState(0);
+  // Replacing the family resets its camera and branch state as well.
+  const [canvasRevision, setCanvasRevision] = useState(0);
   /* Agent tool calls resolve before React commits, so state must never be
    * their source of truth: the ref is the synchronous authority for the
    * tree and its history, and React state mirrors it for rendering. */
@@ -29,16 +30,17 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
     if (!previous) { setUndoDepth(0); return false; }
     live.current.tree = previous;
     setTree(previous); setSelected(null); setUndoDepth(live.current.history.length);
+    setCanvasRevision((revision) => revision + 1);
     return true;
   };
   const importFixture = useCallback(() => {
     const imported = sampleFamily();
-    commit(imported); setSelected(null);
+    commit(imported); setSelected(null); setCanvasRevision((revision) => revision + 1);
     const note = `Loaded ${imported.people.length} invented people and ${imported.relationships.length} links from rowan-family.ged. This replaces the sandbox tree; Undo restores your previous tree.`;
     setMessage(note);
     return note;
   }, [commit]);
-  function reset() { live.current = { tree: BASE, history: [] }; setTree(BASE); setSelected(null); setUndoDepth(0); setMessage("Sandbox reset. Nothing here touches the family archive."); }
+  function reset() { live.current = { tree: BASE, history: [] }; setTree(BASE); setSelected(null); setUndoDepth(0); setCanvasRevision((revision) => revision + 1); setMessage("Sandbox reset. Nothing here touches the family archive."); }
 
   function addExampleRelative() {
     const current = live.current.tree;
@@ -135,13 +137,13 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
 
   return <main className="demo-shell" data-build-id={BUILD_ID} data-version={VERSION}>
     <aside className="demo-sidebar">
-      {archiveAvailable ? <Link className="settings-back-pill" href="/" prefetch={false}>← Back to the archive</Link> : <a className="settings-back-pill" href="https://github.com/tetrisgm/treetree">Get TreeTree · source and setup</a>}<div className="demo-introduction"><p className="eyebrow">Safe sample</p><h1>Build a family. Try it freely.</h1><p>An invented family, ready to explore. Load the sample, add a relative, and undo. No account or AI key needed.</p></div>
+      {archiveAvailable ? <a className="settings-back-pill" href="/">← Back to the archive</a> : <a className="settings-back-pill" href="https://github.com/tetrisgm/treetree">Get TreeTree · source and setup</a>}<div className="demo-introduction"><p className="eyebrow">Safe sample</p><h1>Build a family. Try it freely.</h1><p>An invented family, ready to explore. Load the sample, add a relative, and undo. No account or AI key needed.</p></div>
       <div className="demo-actions"><button type="button" onClick={importFixture}>Load sample GEDCOM</button><button type="button" onClick={addExampleRelative} disabled={tree.people.some((person) => person.displayName.toLowerCase() === "iris rowan")}>Add example relative</button>{undoDepth > 0 && <button type="button" onClick={() => { if (undoLast()) setMessage("Undone in one step."); }}>Undo</button>}<button type="button" onClick={reset}>Reset</button></div>
       <div className="settings-card"><strong>{tree.people.length} people · {tree.relationships.length} {tree.relationships.length === 1 ? "link" : "links"}</strong><p data-demo-message role="status" aria-live="polite">{message}</p></div>
       {selected && <div className="settings-card"><p className="eyebrow">Person</p><h2>{selected.displayName}</h2><p>Born {selected.birthDate || "unknown"}{selected.birthPlace ? ` · ${selected.birthPlace}` : ""}.</p>{selected.deathDate && <p>Died {selected.deathDate}{selected.deathPlace ? ` · ${selected.deathPlace}` : ""}.</p>}<p>{selected.biography || "An invented person in this sandbox."}</p></div>}
       <div className="settings-card"><strong>Try an example</strong><p>Load the family, then select Évelyn to read her record. Add an example relative, then undo the change. Reset clears all sandbox changes.</p><p>With a WebMCP browser agent: “Add Iris Rowan, born 1980, and make Maya Rowan her mother.”</p><p><a href="/demo/sample" download="rowan-family.ged">Download the sample GEDCOM</a> · <a href="https://github.com/tetrisgm/treetree/tree/main/examples">Documents and walkthrough</a></p></div>
       <p className="demo-version">TreeTree · Version {VERSION} · All records are fictional</p>
     </aside>
-    <section className="demo-canvas" aria-label="Synthetic family tree"><FamilyTreeCanvas tree={tree} onSelect={setSelected} highlightedIds={selected ? [selected.id] : []} focusPersonId={selected?.id} /></section>
+    <section className="demo-canvas" aria-label="Synthetic family tree"><FamilyTreeCanvas key={canvasRevision} tree={tree} onSelect={setSelected} highlightedIds={selected ? [selected.id] : []} focusPersonId={selected?.id} /></section>
   </main>;
 }
