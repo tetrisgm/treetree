@@ -174,7 +174,7 @@ button:disabled, button:disabled * { cursor: default; }
 }
 .family-canvas img { -webkit-user-drag: none; user-select: none; }
 .build-version { position: fixed; left: .75rem; bottom: .55rem; z-index: 20; color: rgba(255,255,255,.52); font: 500 .65rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .03em; pointer-events: none; }
-.tree-viewport { position:absolute; inset:0; z-index:1; transform-origin:center; pointer-events:none; touch-action:none; }
+.tree-viewport { position:absolute; inset:0; z-index:1; transform-origin:0 0; pointer-events:none; touch-action:none; }
 .canvas-controls { position:absolute; right:.6rem; bottom:.6rem; z-index:12; display:flex; align-items:center; gap:.15rem; border:1px solid rgba(255,255,255,.09); border-radius:.75rem; background:rgba(44,44,46,.88); padding:.25rem; color:var(--ink); box-shadow:0 10px 30px rgba(0,0,0,.45); backdrop-filter:blur(14px); }
 .canvas-controls button { display:flex; height:2rem; min-width:2rem; align-items:center; justify-content:center; border:0; border-radius:.5rem; background:transparent; color:inherit; font-size:1.15rem; line-height:1; }
 .canvas-controls button:hover { background:rgba(255,255,255,.14); }
@@ -1463,3 +1463,9 @@ html[lang="fa"] { font-variant-numeric: normal; }
 /* the answer to an add appears where the adding happened, not at the far end
    of a long record */
 .relative-picker-notice { margin:0; color:var(--muted); font-size:.78rem; }
+
+/* Native modal behavior keeps keyboard focus inside the launch guide. */
+.demo-intro-dialog { padding:0; border:0; border-radius:1.1rem; margin:auto; max-width:calc(100vw - 2rem); background:transparent; color:var(--ink); }
+.demo-intro-dialog::backdrop { background:rgba(6,9,7,.62); backdrop-filter:blur(3px); }
+.demo-intro-dialog .demo-intro { position:relative; }
+.demo-intro-close { position:absolute; top:.5rem; right:.5rem; border:0; background:transparent; color:var(--ink); width:44px; height:44px; font-size:1.5rem; cursor:pointer; }

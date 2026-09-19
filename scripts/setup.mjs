@@ -13,6 +13,7 @@
 import { execFileSync } from "node:child_process";
 import { createHmac, randomBytes } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
+import { setDeploymentOrigin } from "./deploy-origin.mjs";
 
 const args = new Map();
 for (let index = 2; index < process.argv.length; index += 2) {
@@ -92,7 +93,7 @@ let liveOrigin = origin;
 const advertised = deployOutput.match(/https:\/\/[a-z0-9-]+\.[a-z0-9-]+\.workers\.dev/)?.[0];
 if (!args.get("origin") && advertised && advertised !== origin) {
   liveOrigin = advertised;
-  writeFileSync("wrangler.jsonc", readFileSync("wrangler.jsonc", "utf8").replace(/"PUBLIC_ORIGIN":\s*"[^"]*"/, `"PUBLIC_ORIGIN": ${JSON.stringify(liveOrigin)}`));
+  setDeploymentOrigin(liveOrigin);
   execFileSync("npx", ["wrangler", "deploy", "--keep-vars"], { stdio: ["ignore", "ignore", "inherit"] });
   console.log(`Corrected PUBLIC_ORIGIN to ${liveOrigin} and redeployed.`);
 }

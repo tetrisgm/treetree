@@ -3,3 +3,10 @@
 .demo-shell .demo-actions button { color: var(--ink); }
 .demo-shell .demo-actions button:first-child { color: white; }
 .demo-sidebar .settings-card a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+
+.demo-version { font-size:.78rem; }
+@media (max-width:760px) {
+  .demo-sidebar { gap:14px; padding:16px; }
+  .demo-introduction h1 { font-size:1.6rem; margin:.4rem 0 .6rem; }
+  .demo-introduction p { font-size:.88rem; line-height:1.45; }
+}

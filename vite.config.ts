@@ -23,6 +23,9 @@ export default defineConfig(async () => {
     plugins: [
       vinext(),
       cloudflare({
+        // Optional ignored operator config for an existing deployment.
+        // Normal clones continue to use the public wrangler.jsonc template.
+        configPath: process.env.TREETREE_WRANGLER_CONFIG,
         viteEnvironment: { name: 'rsc', childEnvironments: ['ssr'] },
         // Bindings and flags come from wrangler.jsonc. Repeating arrays
         // here appends duplicates and prevents the local runtime starting.

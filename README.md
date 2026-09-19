@@ -7,7 +7,21 @@ family's archive on a Cloudflare Worker, D1 database and R2 bucket.
 This public repository includes an entirely fictional dataset and examples
 you can use in demos, tests and your own projects under the [MIT license](LICENSE).
 
-## Try it locally in two minutes
+## Try the live demo
+
+**[Open the sandbox](https://treetree.app/demo)** — no sign-in or AI key.
+Load twelve invented people across four generations, add an example relative,
+inspect a record, undo a change and download the GEDCOM. Changes stay in your
+browser tab and disappear on reset or reload.
+
+For the full archive experience, [explore the Everfield family](https://treetree.app):
+switch between family, tree, list, timeline, calendar and map views, or ask
+how two people are related. This is a separate synthetic showcase; public
+visitors can read and ask questions, while edits happen in the sandbox.
+AI chat is rate-limited and can be temporarily unavailable. The sandbox's
+buttons and WebMCP tools work without a model call.
+
+## Run the same sandbox locally
 
 Use Node.js 22.13 or newer:
 
@@ -20,8 +34,8 @@ npm run dev -- --host 127.0.0.1 --port 5173
 
 Open [localhost:5173/demo](http://localhost:5173/demo), then click
 **Load sample GEDCOM**. Explore twelve invented people across four
-generations, select a record, undo the import, or reset. Download the same
-GEDCOM directly from the page.
+generations, click **Add example relative**, select a record, undo, or reset.
+Download the same GEDCOM directly from the page.
 
 The sandbox needs **no Cloudflare account, AI key or sign-in**. It parses a
 real GEDCOM file and keeps changes in browser memory. It does not seed or
@@ -32,12 +46,6 @@ start at `/demo` for the configuration-free trial.
 fictional interview, a letter with conflicting evidence, and prompts with
 expected outcomes. Everyone and every event in these examples is invented;
 they are not anonymized private records.
-
-The existing hosted showcase is [treetree.app](https://treetree.app), with
-its own invented Everfield family and a [browser sandbox](https://treetree.app/demo).
-Hosted deployments can lag this repository; use the local quick start for
-the examples in this revision. AI chat on a hosted archive depends on its
-operator's provider configuration and rate limits.
 
 ## What you can do
 

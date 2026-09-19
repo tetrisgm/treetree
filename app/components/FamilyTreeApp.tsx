@@ -11,6 +11,7 @@ import { useLanguage } from "./LanguageContext";
 import { useWebMcp } from "./useWebMcp";
 import { webMcpAvailable } from "../../lib/webmcp-register";
 import { DemoIntro } from "./DemoIntro";
+import { requestPublicAnswer } from "../../lib/public-answer";
 import { LANGUAGES, LANGUAGE_FLAGS, LANGUAGE_NAMES, type Lang } from "../../lib/i18n";
 import { BUILD_ID, VERSION } from "../../lib/build";
 import { isUsefulArchivePath, selectedFileKey, selectedFilePath } from "../../lib/upload-policy";
@@ -470,7 +471,7 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
 
   return (
     <main ref={mainRef} className={`min-h-screen bg-[var(--paper)] text-[var(--ink)] ${chatCollapsed ? "chat-collapsed" : ""} ${selectedPerson || (placeFocus && viewMode === "map") ? "has-person" : ""}`} style={{ "--chat-width": `${chatWidth}px` } as React.CSSProperties} data-build-id={BUILD_ID} data-version={VERSION} data-hydrated="false">
-      {webMcpDemo && <button type="button" className="webmcp-demo-pill" onClick={() => setIntro("webmcp")}>WebMCP demo — drive this page with your browser&rsquo;s agent →</button>}
+      {webMcpDemo && <button type="button" className="webmcp-demo-pill" onClick={() => setIntro("webmcp")}>About TreeTree · browser-agent guide</button>}
       {webMcpDemo && intro && <DemoIntro mode={intro} onClose={closeIntro} onSwitch={setIntro} />}
       {authError && <div className="border-b border-[rgba(226,140,115,.35)] bg-[rgba(226,140,115,.12)] px-5 py-3 text-center text-sm text-[#e8a289]">{authError === "not_invited" ? "Apple sign-in worked, but this Apple account is not on the family editor list." : authError === "apple_token_exchange_failed" ? "Apple returned an authentication error. Please try again, and contact the site owner if it continues." : "We could not complete Apple sign-in. Please try again."}</div>}
 
@@ -489,9 +490,10 @@ export default function FamilyTreeApp({ initialTree, viewer, signOutPath, signIn
         <div className="relative flex items-center gap-4">
           <LanguagePicker lang={lang} setLang={setLang} label={t("settings.language")} />
           <TreeSearch tree={tree} onPick={(person) => openPerson(person)} />
-          {signInEnabled && !viewer.signedIn && <a className="rounded-full bg-[var(--accent-fill)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3a604a]" href="/settings">{t("nav.signIn")}</a>}
+          {webMcpDemo && <a className="rounded-full bg-[var(--accent-fill)] px-4 py-2 text-sm font-semibold text-white whitespace-nowrap" href="/demo">Try sandbox</a>}
+          {signInEnabled && !webMcpDemo && !viewer.signedIn && <a className="rounded-full bg-[var(--accent-fill)] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#3a604a]" href="/settings">{t("nav.signIn")}</a>}
           {viewer.signedIn && <><button className="account-menu-button" aria-label={t("nav.account")} onClick={() => setMenuOpen(!menuOpen)}>···</button>{menuOpen && <div className="absolute right-0 top-10 z-50 rounded-xl border border-[var(--line)] bg-[var(--card)] p-1 shadow-lg"><a className="block rounded-lg px-4 py-2 text-sm hover:bg-[var(--wash)]" href="/settings">{t("nav.settings")}</a><a className="block rounded-lg px-4 py-2 text-sm hover:bg-[var(--wash)]" href={signOutPath}>{t("nav.signOut")}</a></div>}</>}
-          {!viewer.signedIn && <a className="settings-gear" href="/settings" aria-label="Site settings" title="Site settings">⚙</a>}
+          {!viewer.signedIn && !webMcpDemo && <a className="settings-gear" href="/settings" aria-label="Site settings" title="Site settings">⚙</a>}
         </div>
       </header>
       <div className="family-shell flex h-screen min-h-0">
@@ -769,7 +771,11 @@ function PublicArchiveChat({ signedIn, tree, greeting, focusPerson, onClearFocus
       }
     }
     const contextual = focusPerson ? `[We are currently viewing the record of ${focusPerson.displayName}. Unless another person is named, answer about this person.]\n${text}` : text;
-    try { const response = await fetch("/api/ask", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ message: contextual }) }); const data = await response.json() as { reply?: string; error?: string }; const answer = response.ok ? data.reply || "No answer recorded." : "The archivist could not answer right now."; setReply(answer); onPeopleMentioned(tree.people.filter((person) => answer.toLocaleLowerCase().includes(person.displayName.toLocaleLowerCase()))); } finally { setBusy(false); }
+    try {
+      const answer = await requestPublicAnswer(contextual);
+      setReply(answer);
+      onPeopleMentioned(tree.people.filter((person) => answer.toLocaleLowerCase().includes(person.displayName.toLocaleLowerCase())));
+    } finally { setBusy(false); }
   }
   return (
     <div className="public-chat flex h-full min-h-0 w-full flex-col">

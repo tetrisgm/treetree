@@ -30,8 +30,10 @@ AI key, owner email or database seeding is needed for this page.
    Loading replaces the current sandbox tree; it does not merge custom edits.
 3. Select **Évelyn Vale** to see a deceased ancestor's biography and Bristol
    death record. Select **Alex Chen** to see a deliberately unknown birth date.
-4. Click **Undo** to restore the previous tree, or **Reset** to return to
-   Maya and Leo and clear the undo history. Reloading also resets everything.
+4. Click **Add example relative** to add Iris Rowan as Maya’s daughter.
+   Click **Undo** to remove that change. A second Undo restores the starting
+   couple. **Reset** returns to
+   Maya and Leo and clears the undo history. Reloading also resets everything.
 5. **Download the sample GEDCOM** saves the exact file used by the sandbox.
 
 The sandbox changes only memory in this browser tab. It never reads or writes
@@ -47,7 +49,9 @@ In a browser with WebMCP support, ask its agent:
   and parent link appear. Each tool action is a separate undo step.
 - “Undo that.” / “Reset the sandbox.”
 
-Ordinary browsers can use the buttons; WebMCP is optional.
+Ordinary browsers can use the buttons; WebMCP is optional. Duplicate links
+do not create additional records, and self-links, parent cycles and third
+parents are rejected without changing the sandbox.
 
 ## Try document evidence in your own test archive
 

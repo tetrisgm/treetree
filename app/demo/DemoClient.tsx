@@ -4,9 +4,9 @@ import { FamilyTreeCanvas } from "../components/FamilyTreeCanvas";
 import type { FamilyTree, Person } from "../../lib/types";
 import { registerBrowserTools, type BrowserTool } from "../../lib/webmcp-register";
 import Link from "next/link";
-import { sampleFamily, startingFamily } from "../../lib/demo-family";
+import { BUILD_ID, VERSION } from "../../lib/build";
+import { linkDemoPeople, newDemoPerson, sampleFamily, startingFamily } from "../../lib/demo-family";
 
-const p = (id: string, displayName: string, birthDate: string, gender: "male" | "female"): Person => ({ id, displayName, gender, givenName: displayName.split(" ")[0], familyName: displayName.split(" ").slice(1).join(" "), maidenName: null, birthDate, deathDate: null, birthPlace: null, deathPlace: null, birthCity: null, birthCountry: null, deathCity: null, deathCountry: null, burialPlace: null, residence: null, biography: null, photoAttachmentId: null });
 const BASE = startingFamily();
 
 export default function DemoClient({ archiveAvailable }: { archiveAvailable: boolean }) {
@@ -18,6 +18,7 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
    * tree and its history, and React state mirrors it for rendering. */
   const live = useRef({ tree: BASE, history: [] as FamilyTree[] });
   const commit = useCallback((next: FamilyTree, note?: { keepHistory?: boolean }) => {
+    if (next === live.current.tree) return;
     if (!note?.keepHistory) live.current.history.push(live.current.tree);
     live.current.tree = next;
     setTree(next);
@@ -38,6 +39,16 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
     return note;
   }, [commit]);
   function reset() { live.current = { tree: BASE, history: [] }; setTree(BASE); setSelected(null); setUndoDepth(0); setMessage("Sandbox reset. Nothing here touches the family archive."); }
+
+  function addExampleRelative() {
+    const current = live.current.tree;
+    if (current.people.some((person) => person.displayName.toLowerCase() === "iris rowan")) return;
+    const mother = current.people.find((person) => person.displayName === "Maya Rowan")!;
+    const person = newDemoPerson("Iris Rowan", "1980", "female");
+    commit(linkDemoPeople({ ...current, people: [...current.people, person] }, mother.id, person.id, "parent"));
+    setSelected(person);
+    setMessage("Added Iris Rowan, born 1980, as Maya's daughter. Undo removes this change.");
+  }
 
   /* The sandbox is the WebMCP showcase: no sign-in, invented people, and a
    * browser agent gets full creative tools over the very canvas the human is
@@ -81,7 +92,7 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
           const name = String(args.name ?? "").trim();
           if (!name) throw new Error("Give the person a name.");
           if (live.current.tree.people.some((person) => person.displayName.toLowerCase() === name.toLowerCase())) throw new Error(`${name} is already here.`);
-          const person = p(crypto.randomUUID(), name, String(args.birth_year ?? "").trim() || "", args.gender === "male" || args.gender === "female" ? args.gender : "female");
+          const person = newDemoPerson(name, String(args.birth_year ?? ""), args.gender === "male" || args.gender === "female" ? args.gender : null);
           mutate((current) => ({ ...current, people: [...current.people, person] }));
           setSelected(person);
           return `Added ${name} to the family.`;
@@ -90,15 +101,14 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
         { parent: { type: "string" }, child: { type: "string" } }, ["parent", "child"],
         (args) => {
           const parent = findPerson(args.parent), child = findPerson(args.child);
-          if (parent.id === child.id) throw new Error("A person cannot be their own parent.");
-          mutate((current) => ({ ...current, relationships: [...current.relationships, { id: crypto.randomUUID(), fromPersonId: parent.id, toPersonId: child.id, type: "parent" }] }));
+          mutate((current) => linkDemoPeople(current, parent.id, child.id, "parent"));
           return `Linked ${parent.displayName} as a parent of ${child.displayName}.`;
         }),
       tool("link_marriage", "Record a marriage between two sandbox people (exact names).",
         { person_a: { type: "string" }, person_b: { type: "string" } }, ["person_a", "person_b"],
         (args) => {
           const a = findPerson(args.person_a), b = findPerson(args.person_b);
-          mutate((current) => ({ ...current, relationships: [...current.relationships, { id: crypto.randomUUID(), fromPersonId: a.id, toPersonId: b.id, type: "spouse" }] }));
+          mutate((current) => linkDemoPeople(current, a.id, b.id, "spouse"));
           return `Recorded the marriage of ${a.displayName} and ${b.displayName}.`;
         }),
       tool("import_sample_gedcom", "Parse the bundled fictional Rowan GEDCOM and replace the sandbox tree. Undo restores the previous tree.", {}, [],
@@ -123,13 +133,14 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
     };
   }, [commit, importFixture]);
 
-  return <main className="demo-shell">
+  return <main className="demo-shell" data-build-id={BUILD_ID} data-version={VERSION}>
     <aside className="demo-sidebar">
-      {archiveAvailable ? <Link className="settings-back-pill" href="/" prefetch={false}>← Back to the archive</Link> : <a className="settings-back-pill" href="https://github.com/tetrisgm/treetree">Get TreeTree · source and setup</a>}<div><p className="eyebrow">Safe sample</p><h1>Meet the family archivist.</h1><p>Explore four generations of the invented Rowan family. Load the sample file, inspect a person, and undo the change. Everything stays in this browser tab; no account or AI key is needed.</p></div>
-      <div className="demo-actions"><button type="button" onClick={importFixture}>Load sample GEDCOM</button>{undoDepth > 0 && <button type="button" onClick={() => { if (undoLast()) setMessage("Undone in one step."); }}>Undo</button>}<button type="button" onClick={reset}>Reset</button></div>
-      <div className="settings-card"><strong>Sandbox activity</strong><p data-demo-message role="status" aria-live="polite">{message}</p></div>
+      {archiveAvailable ? <Link className="settings-back-pill" href="/" prefetch={false}>← Back to the archive</Link> : <a className="settings-back-pill" href="https://github.com/tetrisgm/treetree">Get TreeTree · source and setup</a>}<div className="demo-introduction"><p className="eyebrow">Safe sample</p><h1>Build a family. Try it freely.</h1><p>An invented family, ready to explore. Load the sample, add a relative, and undo. No account or AI key needed.</p></div>
+      <div className="demo-actions"><button type="button" onClick={importFixture}>Load sample GEDCOM</button><button type="button" onClick={addExampleRelative} disabled={tree.people.some((person) => person.displayName.toLowerCase() === "iris rowan")}>Add example relative</button>{undoDepth > 0 && <button type="button" onClick={() => { if (undoLast()) setMessage("Undone in one step."); }}>Undo</button>}<button type="button" onClick={reset}>Reset</button></div>
+      <div className="settings-card"><strong>{tree.people.length} people · {tree.relationships.length} {tree.relationships.length === 1 ? "link" : "links"}</strong><p data-demo-message role="status" aria-live="polite">{message}</p></div>
       {selected && <div className="settings-card"><p className="eyebrow">Person</p><h2>{selected.displayName}</h2><p>Born {selected.birthDate || "unknown"}{selected.birthPlace ? ` · ${selected.birthPlace}` : ""}.</p>{selected.deathDate && <p>Died {selected.deathDate}{selected.deathPlace ? ` · ${selected.deathPlace}` : ""}.</p>}<p>{selected.biography || "An invented person in this sandbox."}</p></div>}
-      <div className="settings-card"><strong>Try an example</strong><p>Load the family, then select Évelyn to read her record. Undo returns to Maya and Leo. Reset clears all sandbox changes.</p><p>With a WebMCP browser agent: “Add Iris Rowan, born 1980, and make Maya Rowan her mother.”</p><p><a href="/demo/sample" download="rowan-family.ged">Download the sample GEDCOM</a> · <a href="https://github.com/tetrisgm/treetree/tree/main/examples">Documents and walkthrough</a></p></div>
+      <div className="settings-card"><strong>Try an example</strong><p>Load the family, then select Évelyn to read her record. Add an example relative, then undo the change. Reset clears all sandbox changes.</p><p>With a WebMCP browser agent: “Add Iris Rowan, born 1980, and make Maya Rowan her mother.”</p><p><a href="/demo/sample" download="rowan-family.ged">Download the sample GEDCOM</a> · <a href="https://github.com/tetrisgm/treetree/tree/main/examples">Documents and walkthrough</a></p></div>
+      <p className="demo-version">TreeTree · Version {VERSION} · All records are fictional</p>
     </aside>
     <section className="demo-canvas" aria-label="Synthetic family tree"><FamilyTreeCanvas tree={tree} onSelect={setSelected} highlightedIds={selected ? [selected.id] : []} focusPersonId={selected?.id} /></section>
   </main>;

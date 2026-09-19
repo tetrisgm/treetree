@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { GET } from "../app/demo/sample/route";
-import { sampleFamily, sampleGedcom, startingFamily } from "../lib/demo-family";
+import { linkDemoPeople, newDemoPerson, sampleFamily, sampleGedcom, startingFamily } from "../lib/demo-family";
 import { buildGedcom } from "../lib/gedcom";
 import { parseGedcom } from "../lib/gedcom-import";
 import { redactLivingDetails } from "../lib/living-privacy";
@@ -61,5 +61,29 @@ describe("public synthetic examples", () => {
     expect(response.headers.get("content-disposition")).toContain('filename="rowan-family.ged"');
     expect(response.headers.get("content-type")).toBe("text/plain; charset=utf-8");
     expect(await response.text()).toBe(sampleGedcom);
+  });
+
+  it("does not invent missing gender or birth information", () => {
+    expect(newDemoPerson("An invented relative")).toMatchObject({ gender: null, birthDate: null });
+    expect(() => newDemoPerson("   ")).toThrow(/name/);
+    expect(() => newDemoPerson("Iris Rowan", "yesterday")).toThrow(/four-digit/);
+    expect(() => newDemoPerson("Iris Rowan", "9999")).toThrow(/four-digit/);
+  });
+
+  it("keeps duplicate links idempotent and rejects invalid endpoints and self-marriages", () => {
+    const tree = startingFamily();
+    const [maya, leo] = tree.people;
+    expect(linkDemoPeople(tree, maya.id, leo.id, "spouse")).toBe(tree);
+    expect(linkDemoPeople(tree, leo.id, maya.id, "spouse")).toBe(tree);
+    expect(() => linkDemoPeople(tree, maya.id, maya.id, "spouse")).toThrow(/own parent or spouse/);
+    expect(() => linkDemoPeople(tree, maya.id, "missing", "parent")).toThrow(/Both people/);
+  });
+
+  it("rejects a third parent and an ancestor cycle without changing the tree", () => {
+    const tree = sampleFamily();
+    const id = (name: string) => tree.people.find((person) => person.displayName === name)!.id;
+    expect(() => linkDemoPeople(tree, id("Alex Chen"), id("June Ortiz"), "parent")).toThrow(/two recorded parents/);
+    expect(() => linkDemoPeople(tree, id("June Ortiz"), id("Arthur Rowan"), "parent")).toThrow(/own ancestor/);
+    expect(tree.relationships).toHaveLength(17);
   });
 });
