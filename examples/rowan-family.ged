@@ -1,0 +1,152 @@
+0 HEAD
+1 SOUR TREETREE_SYNTHETIC
+2 NAME TreeTree fictional Rowan family
+1 GEDC
+2 VERS 5.5.1
+2 FORM LINEAGE-LINKED
+1 CHAR UTF-8
+1 SUBM @SUB1@
+1 NOTE Entirely invented demonstration data, not anonymized family records. MIT licensed.
+0 @SUB1@ SUBM
+1 NAME TreeTree synthetic examples
+0 @I1@ INDI
+1 NAME Maya /Rowan/
+1 SEX F
+1 BIRT
+2 DATE 1952
+2 PLAC Lisbon, Portugal
+1 RESI
+2 PLAC Lyon, France
+1 NOTE Fictional teacher who kept a notebook of family recipes. The sample letter questions her birth year.
+1 FAMC @F2@
+1 FAMS @F3@
+0 @I2@ INDI
+1 NAME Leo /Rowan/
+1 SEX M
+1 BIRT
+2 DATE 1950
+2 PLAC Bristol, United Kingdom
+1 RESI
+2 PLAC Lyon, France
+1 NOTE Fictional bookbinder. He and Maya moved to Lyon in 1986.
+1 FAMC @F1@
+1 FAMS @F3@
+0 @I3@ INDI
+1 NAME Nora /Rowan/
+1 SEX F
+1 BIRT
+2 DATE 14 MAY 1978
+2 PLAC Bristol, United Kingdom
+1 RESI
+2 PLAC Montreal, Canada
+1 NOTE Fictional illustrator and daughter of Maya and Leo.
+1 FAMC @F3@
+1 FAMS @F4@
+0 @I4@ INDI
+1 NAME Sam /Ortiz/
+1 SEX M
+1 BIRT
+2 DATE 1977
+2 PLAC Madrid, Spain
+1 RESI
+2 PLAC Montreal, Canada
+1 NOTE Fictional musician and partner of Nora.
+1 FAMS @F4@
+0 @I5@ INDI
+1 NAME Eli /Ortiz/
+1 SEX M
+1 BIRT
+2 DATE 2008
+2 PLAC Montreal, Canada
+1 NOTE Fictional child of Nora and Sam. Useful for checking living-person privacy on a separate test archive.
+1 FAMC @F4@
+0 @I6@ INDI
+1 NAME June /Ortiz/
+1 SEX F
+1 BIRT
+2 DATE 2011
+2 PLAC Montreal, Canada
+1 NOTE Fictional child of Nora and Sam, and sibling of Eli.
+1 FAMC @F4@
+0 @I7@ INDI
+1 NAME Arthur /Rowan/
+1 SEX M
+1 BIRT
+2 DATE 1923
+2 PLAC Bath, United Kingdom
+1 DEAT
+2 DATE 2001
+2 PLAC Bristol, United Kingdom
+1 NOTE Fictional carpenter and father of Leo.
+1 FAMS @F1@
+0 @I8@ INDI
+1 NAME Évelyn /Vale/
+1 SEX F
+1 BIRT
+2 DATE 1925
+2 PLAC Nantes, France
+1 DEAT
+2 DATE 2015
+2 PLAC Bristol, United Kingdom
+1 NOTE Fictional librarian. Her accented name exercises UTF-8 import and export.
+1 FAMS @F1@
+0 @I9@ INDI
+1 NAME Luis /Linden/
+1 SEX M
+1 BIRT
+2 DATE MAR 1920
+2 PLAC Porto, Portugal
+1 DEAT
+2 DATE 1999
+2 PLAC Lisbon, Portugal
+1 NOTE Fictional gardener. Only the month and year of his birth are recorded.
+1 FAMS @F2@
+0 @I10@ INDI
+1 NAME Rosa /Solis/
+1 SEX F
+1 BIRT
+2 DATE 1924
+2 PLAC Coimbra, Portugal
+1 DEAT
+2 DATE 2010
+2 PLAC Lisbon, Portugal
+1 NOTE Fictional seamstress and mother of Maya.
+1 FAMS @F2@
+0 @I11@ INDI
+1 NAME Owen /Rowan/
+1 SEX M
+1 BIRT
+2 DATE 1982
+2 PLAC Bristol, United Kingdom
+1 NOTE Fictional younger brother of Nora and partner of Alex.
+1 FAMC @F3@
+1 FAMS @F5@
+0 @I12@ INDI
+1 NAME Alex /Chen/
+1 SEX F
+1 RESI
+2 PLAC Vancouver, Canada
+1 NOTE Fictional architect. Her birth date and birthplace are deliberately unknown; do not invent them.
+1 FAMS @F5@
+0 @F1@ FAM
+1 HUSB @I7@
+1 WIFE @I8@
+1 CHIL @I2@
+0 @F2@ FAM
+1 HUSB @I9@
+1 WIFE @I10@
+1 CHIL @I1@
+0 @F3@ FAM
+1 HUSB @I2@
+1 WIFE @I1@
+1 CHIL @I3@
+1 CHIL @I11@
+0 @F4@ FAM
+1 HUSB @I4@
+1 WIFE @I3@
+1 CHIL @I5@
+1 CHIL @I6@
+0 @F5@ FAM
+1 HUSB @I11@
+1 WIFE @I12@
+0 TRLR

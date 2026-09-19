@@ -1,0 +1,5 @@
+.demo-shell { color: var(--ink); }
+.demo-shell .demo-actions { margin-top: 0; }
+.demo-shell .demo-actions button { color: var(--ink); }
+.demo-shell .demo-actions button:first-child { color: white; }
+.demo-sidebar .settings-card a { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }

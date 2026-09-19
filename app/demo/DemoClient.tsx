@@ -1,19 +1,15 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { FamilyTreeCanvas } from "../components/FamilyTreeCanvas";
 import type { FamilyTree, Person } from "../../lib/types";
 import { registerBrowserTools, type BrowserTool } from "../../lib/webmcp-register";
 import Link from "next/link";
+import { sampleFamily, startingFamily } from "../../lib/demo-family";
 
 const p = (id: string, displayName: string, birthDate: string, gender: "male" | "female"): Person => ({ id, displayName, gender, givenName: displayName.split(" ")[0], familyName: displayName.split(" ").slice(1).join(" "), maidenName: null, birthDate, deathDate: null, birthPlace: null, deathPlace: null, birthCity: null, birthCountry: null, deathCity: null, deathCountry: null, burialPlace: null, residence: null, biography: null, photoAttachmentId: null });
-const BASE: FamilyTree = { people: [p("maya", "Maya Rowan", "1952", "female"), p("leo", "Leo Rowan", "1950", "male")], relationships: [{ id: "couple", fromPersonId: "maya", toPersonId: "leo", type: "spouse" }], stories: [] };
-const IMPORTED: FamilyTree = { people: [...BASE.people, p("nora", "Nora Rowan", "1978", "female"), p("sam", "Sam Ortiz", "1977", "male"), p("eli", "Eli Ortiz", "2008", "male"), p("june", "June Ortiz", "2011", "female")], relationships: [...BASE.relationships,
-  { id: "r1", fromPersonId: "maya", toPersonId: "nora", type: "parent" }, { id: "r2", fromPersonId: "leo", toPersonId: "nora", type: "parent" },
-  { id: "r3", fromPersonId: "nora", toPersonId: "sam", type: "spouse" }, { id: "r4", fromPersonId: "nora", toPersonId: "eli", type: "parent" },
-  { id: "r5", fromPersonId: "sam", toPersonId: "eli", type: "parent" }, { id: "r6", fromPersonId: "nora", toPersonId: "june", type: "parent" },
-  { id: "r7", fromPersonId: "sam", toPersonId: "june", type: "parent" }], stories: [] };
+const BASE = startingFamily();
 
-export default function DemoClient() {
+export default function DemoClient({ archiveAvailable }: { archiveAvailable: boolean }) {
   const [tree, setTree] = useState(BASE); const [selected, setSelected] = useState<Person | null>(null);
   const [message, setMessage] = useState("This sandbox uses invented people and resets in your browser. A browser agent (WebMCP) can build here too — its tools create, link, undo, and reset this very canvas.");
   const [undoDepth, setUndoDepth] = useState(0);
@@ -21,12 +17,12 @@ export default function DemoClient() {
    * their source of truth: the ref is the synchronous authority for the
    * tree and its history, and React state mirrors it for rendering. */
   const live = useRef({ tree: BASE, history: [] as FamilyTree[] });
-  const commit = (next: FamilyTree, note?: { keepHistory?: boolean }) => {
+  const commit = useCallback((next: FamilyTree, note?: { keepHistory?: boolean }) => {
     if (!note?.keepHistory) live.current.history.push(live.current.tree);
     live.current.tree = next;
     setTree(next);
     setUndoDepth(live.current.history.length);
-  };
+  }, []);
   const undoLast = (): boolean => {
     const previous = live.current.history.pop();
     if (!previous) { setUndoDepth(0); return false; }
@@ -34,7 +30,13 @@ export default function DemoClient() {
     setTree(previous); setSelected(null); setUndoDepth(live.current.history.length);
     return true;
   };
-  function importFixture() { commit(IMPORTED); setMessage("Imported 4 people and 6 parent/spouse links from sample-family.ged. No conflicts found."); }
+  const importFixture = useCallback(() => {
+    const imported = sampleFamily();
+    commit(imported); setSelected(null);
+    const note = `Loaded ${imported.people.length} invented people and ${imported.relationships.length} links from rowan-family.ged. This replaces the sandbox tree; Undo restores your previous tree.`;
+    setMessage(note);
+    return note;
+  }, [commit]);
   function reset() { live.current = { tree: BASE, history: [] }; setTree(BASE); setSelected(null); setUndoDepth(0); setMessage("Sandbox reset. Nothing here touches the family archive."); }
 
   /* The sandbox is the WebMCP showcase: no sign-in, invented people, and a
@@ -99,8 +101,8 @@ export default function DemoClient() {
           mutate((current) => ({ ...current, relationships: [...current.relationships, { id: crypto.randomUUID(), fromPersonId: a.id, toPersonId: b.id, type: "spouse" }] }));
           return `Recorded the marriage of ${a.displayName} and ${b.displayName}.`;
         }),
-      tool("import_sample_gedcom", "Run the canned GEDCOM import, the way a real archive ingests an export from another genealogy service.", {}, [],
-        () => { commit(IMPORTED); return "Imported 4 people and 6 links from sample-family.ged."; }),
+      tool("import_sample_gedcom", "Parse the bundled fictional Rowan GEDCOM and replace the sandbox tree. Undo restores the previous tree.", {}, [],
+        () => importFixture()),
       tool("undo", "Undo the most recent change, whoever made it - human click or agent call.", {}, [],
         () => { if (!undoLast()) throw new Error("Nothing to undo."); return "Undone."; }),
       tool("reset_sandbox", "Clear the sandbox back to the founding couple.", {}, [],
@@ -119,14 +121,15 @@ export default function DemoClient() {
       delete (window as unknown as { __ttDispatch?: typeof run }).__ttDispatch;
       teardown?.();
     };
-  }, []);
+  }, [commit, importFixture]);
 
   return <main className="demo-shell">
     <aside className="demo-sidebar">
-      <Link className="settings-back-pill" href="/">← Back to the archive</Link><div><p className="eyebrow">Safe sample</p><h1>Meet the family archivist.</h1><p>Try the core loop with synthetic records: import a structured family file, inspect the graph, and undo it. In a WebMCP browser, your agent holds the same tools — ask it to build a family and watch this canvas.</p></div>
-      <div className="settings-card"><strong>Archivist</strong><p data-demo-message>{message}</p></div>
-      {selected && <div className="settings-card"><p className="eyebrow">Person</p><h2>{selected.displayName}</h2><p>Born {selected.birthDate || "—"}. This sample profile contains no real person or private source.</p></div>}
-      <div className="demo-actions"><button type="button" onClick={importFixture} disabled={tree.people.length > BASE.people.length}>Import sample GEDCOM</button>{undoDepth > 0 && <button type="button" onClick={() => { if (undoLast()) setMessage("Undone in one step."); }}>Undo</button>}<button type="button" onClick={reset}>Reset</button></div>
+      {archiveAvailable ? <Link className="settings-back-pill" href="/" prefetch={false}>← Back to the archive</Link> : <a className="settings-back-pill" href="https://github.com/tetrisgm/treetree">Get TreeTree · source and setup</a>}<div><p className="eyebrow">Safe sample</p><h1>Meet the family archivist.</h1><p>Explore four generations of the invented Rowan family. Load the sample file, inspect a person, and undo the change. Everything stays in this browser tab; no account or AI key is needed.</p></div>
+      <div className="demo-actions"><button type="button" onClick={importFixture}>Load sample GEDCOM</button>{undoDepth > 0 && <button type="button" onClick={() => { if (undoLast()) setMessage("Undone in one step."); }}>Undo</button>}<button type="button" onClick={reset}>Reset</button></div>
+      <div className="settings-card"><strong>Sandbox activity</strong><p data-demo-message role="status" aria-live="polite">{message}</p></div>
+      {selected && <div className="settings-card"><p className="eyebrow">Person</p><h2>{selected.displayName}</h2><p>Born {selected.birthDate || "unknown"}{selected.birthPlace ? ` · ${selected.birthPlace}` : ""}.</p>{selected.deathDate && <p>Died {selected.deathDate}{selected.deathPlace ? ` · ${selected.deathPlace}` : ""}.</p>}<p>{selected.biography || "An invented person in this sandbox."}</p></div>}
+      <div className="settings-card"><strong>Try an example</strong><p>Load the family, then select Évelyn to read her record. Undo returns to Maya and Leo. Reset clears all sandbox changes.</p><p>With a WebMCP browser agent: “Add Iris Rowan, born 1980, and make Maya Rowan her mother.”</p><p><a href="/demo/sample" download="rowan-family.ged">Download the sample GEDCOM</a> · <a href="https://github.com/tetrisgm/treetree/tree/main/examples">Documents and walkthrough</a></p></div>
     </aside>
     <section className="demo-canvas" aria-label="Synthetic family tree"><FamilyTreeCanvas tree={tree} onSelect={setSelected} highlightedIds={selected ? [selected.id] : []} focusPersonId={selected?.id} /></section>
   </main>;

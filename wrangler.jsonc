@@ -3,7 +3,8 @@
   // scripts/setup.mjs rewrites this file for your deployment - run it first.
   "name": "my-family-archive",
   "main": "dist/server/index.js",
-  "compatibility_date": "2026-08-25",
+  // Matches the workerd runtime pinned by package-lock.json.
+  "compatibility_date": "2026-05-22",
   "compatibility_flags": ["nodejs_compat"],
   "vars": {
     "PUBLIC_ORIGIN": "https://example.workers.dev",

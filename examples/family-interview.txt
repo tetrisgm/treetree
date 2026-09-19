@@ -1,0 +1,18 @@
+SYNTHETIC EXAMPLE — invented testimony, not a real interview.
+License: MIT (the repository license).
+
+Interviewer: Nora, who are your parents and grandparents?
+Nora Rowan: My parents are Maya Rowan and Leo Rowan. Maya's parents are
+Luis Linden and Rosa Solis. Leo's parents are Arthur Rowan and Évelyn Vale.
+
+Interviewer: Who is in your household?
+Nora Rowan: My partner is Sam Ortiz. Our children are Eli and June Ortiz.
+We live in Montreal. My brother Owen Rowan is married to Alex Chen.
+
+Interviewer: When was Alex born?
+Nora Rowan: I don't know her birthday or birthplace. Please leave those
+blank until Alex can tell us.
+
+Interviewer: What do you remember about the move to France?
+Nora Rowan: Maya and Leo moved to Lyon in 1986. Maya brought her recipe
+notebook, and Owen sent a small painted boat for their new kitchen.
