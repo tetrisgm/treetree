@@ -137,6 +137,8 @@ export default function DemoClient({ archiveAvailable }: { archiveAvailable: boo
 
   return <main className="demo-shell" data-build-id={BUILD_ID} data-version={VERSION}>
     <aside className="demo-sidebar">
+      {/* The sandbox needs a document navigation: vinext's client Link fails when returning to the archive. */}
+      {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
       {archiveAvailable ? <a className="settings-back-pill" href="/">← Back to the archive</a> : <a className="settings-back-pill" href="https://github.com/tetrisgm/treetree">Get TreeTree · source and setup</a>}<div className="demo-introduction"><p className="eyebrow">Safe sample</p><h1>Build a family. Try it freely.</h1><p>An invented family, ready to explore. Load the sample, add a relative, and undo. No account or AI key needed.</p></div>
       <div className="demo-actions"><button type="button" onClick={importFixture}>Load sample GEDCOM</button><button type="button" onClick={addExampleRelative} disabled={tree.people.some((person) => person.displayName.toLowerCase() === "iris rowan")}>Add example relative</button>{undoDepth > 0 && <button type="button" onClick={() => { if (undoLast()) setMessage("Undone in one step."); }}>Undo</button>}<button type="button" onClick={reset}>Reset</button></div>
       <div className="settings-card"><strong>{tree.people.length} people · {tree.relationships.length} {tree.relationships.length === 1 ? "link" : "links"}</strong><p data-demo-message role="status" aria-live="polite">{message}</p></div>
