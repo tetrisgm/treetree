@@ -47,3 +47,6 @@ dist/
 .dev.vars
 tsconfig.tsbuildinfo
 test-results/
+
+# Private instance publishing script
+/scripts/sync-public.mjs
